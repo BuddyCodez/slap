@@ -1,0 +1,3 @@
+{
+  "extends": "@slap/config/tsconfig.base.json"
+}
