@@ -20,6 +20,7 @@
     "@slap/db": "workspace:*",
     "@slap/env": "workspace:*",
     "better-auth": "catalog:",
+    "bullmq": "^5.79.1",
     "dotenv": "catalog:",
     "elysia": "catalog:",
     "evlog": "^2.18.1",

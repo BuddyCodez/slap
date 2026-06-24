@@ -1,0 +1,24 @@
+model Sticker {
+  id        String   @id @default(cuid())
+  packId    String
+  pack      Pack     @relation(fields: [packId], references: [id], onDelete: Cascade)
+  url       String?  // CDN URL (.webp)
+  tempUrl   String?
+  r2Key     String?
+  width     Int?
+  height    Int?
+  sizeBytes Int?
+  order     Int
+  status    StickerStatus @default(PROCESSING)
+  createdAt DateTime @default(now())
+
+  @@unique([packId, order])
+  @@index([packId])
+  @@index([status])
+}
+
+enum StickerStatus {
+  PROCESSING
+  READY
+  FAILED
+}

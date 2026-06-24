@@ -2,13 +2,15 @@ model User {
   id            String    @id
   name          String
   email         String
+  username      String
   emailVerified Boolean   @default(false)
   image         String?
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
   sessions      Session[]
   accounts      Account[]
-
+  packs     Pack[]
+  saves     Save[]
   @@unique([email])
   @@map("user")
 }

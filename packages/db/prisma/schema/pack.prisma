@@ -1,0 +1,38 @@
+model Pack {
+  id          String    @id @default(cuid())
+  creatorId   String
+  creator     User      @relation(fields: [creatorId], references: [id], onDelete: Cascade)
+  name        String
+  description String?
+  category    String?
+  thumbnail   String?   // CDN URL
+  status      PackStatus @default(PROCESSING)
+  downloads   Int       @default(0)
+  saves       Int       @default(0)
+  createdAt   DateTime  @default(now())
+  stickers    Sticker[]
+  tags        PackTag[]
+  userSaves   Save[]
+
+  @@index([creatorId])
+  @@index([status])
+  @@index([createdAt])
+  @@index([downloads])
+  @@index([saves])
+  @@index([category])
+}
+model PackTag {
+  packId String
+  tagId  String
+  pack   Pack   @relation(fields: [packId], references: [id], onDelete: Cascade)
+  tag    Tag    @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([packId, tagId])
+  @@index([tagId])
+}
+
+enum PackStatus {
+  PROCESSING
+  READY
+  FAILED
+}

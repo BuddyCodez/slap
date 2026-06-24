@@ -38,8 +38,15 @@
     "check": "biome check --write ."
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.1075.0",
+    "@aws-sdk/s3-request-presigner": "^3.1075.0",
     "@slap/env": "workspace:*",
+    "bullmq": "^5.79.1",
     "dotenv": "catalog:",
+    "file-type": "^22.0.1",
+    "ioredis": "^5.11.1",
+    "resend": "^6.14.0",
+    "sharp": "^0.35.2",
     "zod": "catalog:"
   },
   "devDependencies": {

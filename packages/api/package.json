@@ -18,7 +18,12 @@
     "@slap/auth": "workspace:*",
     "@slap/db": "workspace:*",
     "@slap/env": "workspace:*",
+    "@aws-sdk/client-s3": "^3.1075.0",
+    "bullmq": "^5.79.1",
     "dotenv": "catalog:",
+    "file-type": "^22.0.1",
+    "ioredis": "^5.11.1",
+    "sharp": "^0.35.2",
     "zod": "catalog:"
   },
   "devDependencies": {

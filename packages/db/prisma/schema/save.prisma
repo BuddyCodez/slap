@@ -1,0 +1,11 @@
+model Save {
+  userId    String
+  packId    String
+  user      User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  pack      Pack   @relation(fields: [packId], references: [id], onDelete: Cascade)
+  savedAt   DateTime @default(now())
+
+  @@id([userId, packId])
+  @@index([packId])
+  @@index([savedAt])
+}
