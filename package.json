@@ -1,60 +1,63 @@
 {
-  "name": "slap",
-  "private": true,
-  "workspaces": {
-    "packages": [
-      "apps/*",
-      "packages/*"
-    ],
-    "catalog": {
-      "dotenv": "^17.2.2",
-      "zod": "^4.1.13",
-      "typescript": "^6",
-      "@types/bun": "^1.3.4",
-      "elysia": "^1.4.28",
-      "@orpc/server": "^1.13.14",
-      "@orpc/openapi": "^1.13.14",
-      "@orpc/zod": "^1.13.14",
-      "better-auth": "1.6.11",
-      "@orpc/client": "^1.13.14",
-      "@better-auth/expo": "1.6.11"
-    }
-  },
-  "type": "module",
-  "scripts": {
-    "dev": "nx run-many -t dev",
-    "build": "nx run-many -t build",
-    "check-types": "nx run-many -t check-types",
-    "dev:native": "nx run-many -t dev --projects=native",
-    "dev:server": "nx run-many -t dev --projects=server",
-    "db:push": "nx run-many -t db:push --projects=@slap/db",
-    "db:studio": "nx run-many -t db:studio --projects=@slap/db",
-    "db:generate": "nx run-many -t db:generate --projects=@slap/db",
-    "db:migrate": "nx run-many -t db:migrate --projects=@slap/db",
-    "db:start": "nx run-many -t db:start --projects=@slap/db",
-    "db:watch": "nx run-many -t db:watch --projects=@slap/db",
-    "db:stop": "nx run-many -t db:stop --projects=@slap/db",
-    "db:down": "nx run-many -t db:down --projects=@slap/db",
-    "check": "biome check --write ."
-  },
-  "dependencies": {
-    "@aws-sdk/client-s3": "^3.1075.0",
-    "@aws-sdk/s3-request-presigner": "^3.1075.0",
-    "@slap/env": "workspace:*",
-    "bullmq": "^5.79.1",
-    "dotenv": "catalog:",
-    "file-type": "^22.0.1",
-    "ioredis": "^5.11.1",
-    "resend": "^6.14.0",
-    "sharp": "^0.35.2",
-    "zod": "catalog:"
-  },
-  "devDependencies": {
-    "@biomejs/biome": "^2.4.16",
-    "@slap/config": "workspace:*",
-    "@types/bun": "catalog:",
-    "nx": "^22.7.5",
-    "typescript": "catalog:"
-  },
-  "packageManager": "bun@1.3.0"
+	"name": "slap",
+	"private": true,
+	"workspaces": {
+		"packages": [
+			"apps/*",
+			"packages/*"
+		],
+		"catalog": {
+			"dotenv": "^17.2.2",
+			"zod": "^4.1.13",
+			"typescript": "^6",
+			"@types/bun": "^1.3.4",
+			"elysia": "^1.4.28",
+			"@orpc/server": "^1.13.14",
+			"@orpc/openapi": "^1.13.14",
+			"@orpc/zod": "^1.13.14",
+			"better-auth": "1.6.11",
+			"@orpc/client": "^1.13.14",
+			"@better-auth/expo": "1.6.11"
+		}
+	},
+	"type": "module",
+	"scripts": {
+		"dev": "nx run-many -t dev",
+		"build": "nx run-many -t build",
+		"check-types": "nx run-many -t check-types",
+		"dev:native": "nx run-many -t dev --projects=native",
+		"dev:server": "nx run-many -t dev --projects=server",
+		"db:push": "nx run-many -t db:push --projects=@slap/db",
+		"db:studio": "nx run-many -t db:studio --projects=@slap/db",
+		"db:generate": "nx run-many -t db:generate --projects=@slap/db",
+		"db:migrate": "nx run-many -t db:migrate --projects=@slap/db",
+		"db:start": "nx run-many -t db:start --projects=@slap/db",
+		"db:watch": "nx run-many -t db:watch --projects=@slap/db",
+		"db:stop": "nx run-many -t db:stop --projects=@slap/db",
+		"db:down": "nx run-many -t db:down --projects=@slap/db",
+		"check": "biome check --write ."
+	},
+	"dependencies": {
+		"@sinclair/typebox": "0.34.49",
+		"@slap/env": "workspace:*",
+		"aws4fetch": "^1.0.20",
+		"bullmq": "^5.79.1",
+		"dotenv": "catalog:",
+		"file-type": "^22.0.1",
+		"ioredis": "^5.11.1",
+		"resend": "^6.14.0",
+		"sharp": "^0.35.2",
+		"zod": "catalog:"
+	},
+	"devDependencies": {
+		"@biomejs/biome": "^2.4.16",
+		"@slap/config": "workspace:*",
+		"@types/bun": "catalog:",
+		"nx": "^22.7.5",
+		"typescript": "catalog:"
+	},
+	"packageManager": "bun@1.3.0",
+	"overrides": {
+		"@sinclair/typebox": "0.34.49"
+	}
 }

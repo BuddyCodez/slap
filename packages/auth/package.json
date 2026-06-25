@@ -1,26 +1,26 @@
 {
-  "name": "@slap/auth",
-  "type": "module",
-  "exports": {
-    ".": {
-      "default": "./src/index.ts"
-    },
-    "./*": {
-      "default": "./src/*.ts"
-    }
-  },
-  "scripts": {},
-  "dependencies": {
-    "@better-auth/expo": "catalog:",
-    "@slap/db": "workspace:*",
-    "@slap/env": "workspace:*",
-    "better-auth": "catalog:",
-    "dotenv": "catalog:",
-    "resend": "^6.14.0",
-    "zod": "catalog:"
-  },
-  "devDependencies": {
-    "@slap/config": "workspace:*",
-    "typescript": "catalog:"
-  }
+	"name": "@slap/auth",
+	"type": "module",
+	"exports": {
+		".": {
+			"default": "./src/index.ts"
+		},
+		"./*": {
+			"default": "./src/*.ts"
+		}
+	},
+	"scripts": {},
+	"dependencies": {
+		"@better-auth/expo": "catalog:",
+		"@slap/db": "workspace:*",
+		"@slap/env": "workspace:*",
+		"better-auth": "catalog:",
+		"dotenv": "catalog:",
+		"resend": "^6.14.0",
+		"zod": "catalog:"
+	},
+	"devDependencies": {
+		"@slap/config": "workspace:*",
+		"typescript": "catalog:"
+	}
 }
