@@ -88,15 +88,21 @@ const styles = StyleSheet.create((theme) => ({
 	wrapper: {
 		flexDirection: "row",
 		alignItems: "center",
-		backgroundColor: theme.colors.surfaceElevated,
-		borderWidth: 1,
-		borderColor: theme.colors.glassBorder,
-		borderRadius: 10, // Apple search bar style
+		backgroundColor: "#1A1A1A",
+		borderWidth: 2,
+		borderColor: "#000000",
+		borderRadius: 4, // Sharp corners
 		paddingHorizontal: theme.spacing.md,
-		minHeight: 40,
+		minHeight: 46,
+		shadowColor: "#000000",
+		shadowOpacity: 1,
+		shadowRadius: 0,
+		shadowOffset: { width: 3, height: 3 },
+		elevation: 3,
 	},
 	wrapperFocused: {
-		borderColor: "rgba(255, 255, 255, 0.25)",
+		backgroundColor: "#222222",
+		borderColor: "#FFF500", // Yellow highlight when focused
 	},
 	icon: {
 		marginRight: theme.spacing.sm - 2,
@@ -106,6 +112,7 @@ const styles = StyleSheet.create((theme) => ({
 		color: theme.colors.foreground,
 		fontSize: theme.fontSize.sm + 1,
 		paddingVertical: 8,
+		fontWeight: "700",
 	},
 	clearBtn: {
 		marginLeft: theme.spacing.xs,

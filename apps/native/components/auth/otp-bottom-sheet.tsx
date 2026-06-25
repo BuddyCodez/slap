@@ -555,6 +555,10 @@ const styles = StyleSheet.create((theme) => ({
 		borderRadius: 4, // Sharp corners
 		paddingHorizontal: theme.spacing.md,
 		minHeight: 52,
+		shadowColor: "#000000",
+		shadowOpacity: 1,
+		shadowRadius: 0,
+		shadowOffset: { width: 3, height: 3 },
 	},
 	input: {
 		flex: 1,

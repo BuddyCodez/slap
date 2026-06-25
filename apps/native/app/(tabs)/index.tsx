@@ -1,4 +1,5 @@
-import { useMemo, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { useState } from "react";
 import { View } from "react-native";
 import { StyleSheet } from "react-native-unistyles";
 
@@ -8,43 +9,43 @@ import { PackMasonryGrid } from "@/components/home/pack-masonry-grid";
 import { TrendingRow } from "@/components/home/trending-row";
 import { Screen } from "@/components/ui/screen";
 import { SearchBar } from "@/components/ui/search-bar";
-import { gridPacks, trendingPacks } from "@/constants/mock-packs";
+import { orpc } from "@/utils/orpc";
 
 export default function HomeScreen() {
 	const [query, setQuery] = useState("");
 	const [activeCategory, setActiveCategory] = useState<string | null>(null);
 
-	const filteredGrid = useMemo(() => {
-		const normalized = query.trim().toLowerCase();
+	// Fetch real trending packs
+	const { data: trendingData } = useQuery(
+		orpc.packs.trending.queryOptions()
+	);
 
-		return gridPacks.filter((pack) => {
-			const matchesCategory = activeCategory
-				? pack.category === activeCategory
-				: true;
-			const matchesQuery =
-				normalized.length === 0 ||
-				pack.name.toLowerCase().includes(normalized) ||
-				pack.creator.name.toLowerCase().includes(normalized);
+	// Fetch real packs list filtered by activeCategory
+	const { data: listData } = useQuery(
+		orpc.packs.list.queryOptions({
+			input: {
+				sort: "new",
+				category: activeCategory || undefined,
+				limit: 30,
+			}
+		})
+	);
 
-			return matchesCategory && matchesQuery;
-		});
-	}, [activeCategory, query]);
+	// Fetch real searched packs
+	const { data: searchData } = useQuery({
+		...orpc.packs.search.queryOptions({
+			input: {
+				query: query.trim(),
+				limit: 30,
+			}
+		}),
+		enabled: query.trim().length > 0
+	});
 
-	const filteredTrending = useMemo(() => {
-		const normalized = query.trim().toLowerCase();
-
-		return trendingPacks.filter((pack) => {
-			const matchesCategory = activeCategory
-				? pack.category === activeCategory
-				: true;
-			const matchesQuery =
-				normalized.length === 0 ||
-				pack.name.toLowerCase().includes(normalized) ||
-				pack.creator.name.toLowerCase().includes(normalized);
-
-			return matchesCategory && matchesQuery;
-		});
-	}, [activeCategory, query]);
+	const trendingPacks = trendingData || [];
+	const allPacks = query.trim().length > 0
+		? (searchData?.items || [])
+		: (listData?.items || []);
 
 	return (
 		<Screen>
@@ -53,8 +54,8 @@ export default function HomeScreen() {
 				<SearchBar value={query} onChangeText={setQuery} />
 			</View>
 			<CategoryFilters activeId={activeCategory} onChange={setActiveCategory} />
-			<TrendingRow packs={filteredTrending} />
-			<PackMasonryGrid packs={filteredGrid} />
+			<TrendingRow packs={trendingPacks} />
+			<PackMasonryGrid packs={allPacks} />
 		</Screen>
 	);
 }

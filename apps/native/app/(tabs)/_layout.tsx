@@ -16,14 +16,12 @@ function TabIcon({
 }
 
 export default function TabLayout() {
-	const { theme } = useUnistyles();
-
 	return (
 		<Tabs
 			screenOptions={{
 				headerShown: false,
-				tabBarActiveTintColor: theme.colors.primary,
-				tabBarInactiveTintColor: theme.colors.muted,
+				tabBarActiveTintColor: "#FFF500", // Cyber-Yellow active tab color
+				tabBarInactiveTintColor: "#8E8E9F",
 				tabBarStyle: styles.tabBar,
 				tabBarLabelStyle: styles.tabLabel,
 			}}
@@ -99,16 +97,17 @@ export default function TabLayout() {
 
 const styles = StyleSheet.create((theme) => ({
 	tabBar: {
-		backgroundColor: theme.colors.background,
-		borderTopColor: theme.colors.glassBorder,
-		borderTopWidth: 1,
-		height: 88,
+		backgroundColor: "#0A0A0A", // Dark industrial background
+		borderTopColor: "#000000",
+		borderTopWidth: 3, // Bold thick border at top of tab bar
+		height: 84,
 		paddingTop: theme.spacing.sm,
-		paddingBottom: theme.spacing.lg,
+		paddingBottom: 24,
 	},
 	tabLabel: {
-		fontSize: theme.fontSize.xs,
-		fontWeight: theme.fontWeight.bold,
-		letterSpacing: 0.2,
+		fontSize: 10,
+		fontWeight: "900", // Heavy block font weight
+		letterSpacing: 0.5,
+		textTransform: "uppercase",
 	},
 }));

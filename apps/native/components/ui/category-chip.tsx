@@ -74,17 +74,21 @@ const styles = StyleSheet.create((theme) => ({
 		gap: theme.spacing.xs,
 		paddingHorizontal: theme.spacing.md,
 		paddingVertical: theme.spacing.sm,
-		borderRadius: 10, // iOS-style rounded-rect pills
-		borderWidth: 1,
-		minHeight: 36,
+		borderRadius: 4, // Sharp corners
+		borderWidth: 2,
+		borderColor: "#000000",
+		minHeight: 38,
+		shadowColor: "#000000",
+		shadowOpacity: 1,
+		shadowRadius: 0,
+		shadowOffset: { width: 3, height: 3 },
+		elevation: 3,
 	},
 	chipActive: {
-		backgroundColor: theme.colors.primary,
-		borderColor: theme.colors.primary,
+		backgroundColor: "#FFF500", // Cyber-Yellow for active state
 	},
 	chipInactive: {
-		backgroundColor: theme.colors.surfaceElevated,
-		borderColor: theme.colors.glassBorder,
+		backgroundColor: "#1A1A1A", // Dark industrial background
 	},
 	emoji: {
 		fontSize: theme.fontSize.sm,
@@ -92,13 +96,13 @@ const styles = StyleSheet.create((theme) => ({
 	},
 	label: {
 		fontSize: theme.fontSize.xs + 1,
-		fontWeight: theme.fontWeight.bold,
+		fontWeight: "900", // Blocky heavy text
 	},
 	labelActive: {
-		color: theme.colors.primaryForeground,
+		color: "#000000",
 	},
 	labelInactive: {
-		color: theme.colors.foreground,
+		color: "#FFFFFF",
 	},
 }));
 

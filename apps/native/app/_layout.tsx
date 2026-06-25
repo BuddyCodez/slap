@@ -12,7 +12,7 @@ export default function RootLayout() {
 	return (
 		<QueryClientProvider client={queryClient}>
 			<GestureHandlerRootView style={styles.root}>
-				<StatusBar style="light" />
+				<StatusBar hidden />
 				<Stack screenOptions={{ headerShown: false, animation: "fade" }}>
 					<Stack.Screen name="index" />
 					<Stack.Screen name="(auth)" />

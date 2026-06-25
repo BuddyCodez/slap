@@ -1,5 +1,5 @@
 import * as Haptics from "expo-haptics";
-import { Pressable, Text, View } from "react-native";
+import { Pressable, Text, View, Image } from "react-native";
 import Animated, {
 	useAnimatedStyle,
 	useSharedValue,
@@ -7,13 +7,12 @@ import Animated, {
 } from "react-native-reanimated";
 import { StyleSheet } from "react-native-unistyles";
 
-import type { MockPack } from "@/constants/mock-packs";
 import { formatCount } from "@/utils/format";
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
 type TrendingPackCardProps = {
-	pack: MockPack;
+	pack: any;
 	onPress?: () => void;
 };
 
@@ -23,6 +22,8 @@ export function TrendingPackCard({ pack, onPress }: TrendingPackCardProps) {
 	const animatedStyle = useAnimatedStyle(() => ({
 		transform: [{ scale: scale.value }],
 	}));
+
+	const imageUrl = pack.thumbnail || pack.stickers?.[0]?.url;
 
 	return (
 		<AnimatedPressable
@@ -38,11 +39,15 @@ export function TrendingPackCard({ pack, onPress }: TrendingPackCardProps) {
 			}}
 			style={[styles.card, animatedStyle]}
 			accessibilityRole="button"
-			accessibilityLabel={`${pack.name} by ${pack.creator.name}`}
+			accessibilityLabel={`${pack.name} by ${pack.creator?.name || "Unknown"}`}
 		>
 			{/* Sticker / Emoji Preview Box */}
 			<View style={styles.thumb}>
-				<Text style={styles.emoji}>{pack.emoji}</Text>
+				{imageUrl ? (
+					<Image source={{ uri: imageUrl }} style={styles.previewImage} resizeMode="contain" />
+				) : (
+					<Text style={styles.emoji}>{pack.emoji || "⚡"}</Text>
+				)}
 			</View>
 
 			{/* Pack Name */}
@@ -52,7 +57,7 @@ export function TrendingPackCard({ pack, onPress }: TrendingPackCardProps) {
 
 			{/* Creator Handle */}
 			<Text style={styles.creator} numberOfLines={1}>
-				@{pack.creator.name}
+				@{pack.creator?.name || "user"}
 			</Text>
 
 			{/* Metadata & Downloads */}
@@ -73,40 +78,53 @@ export function TrendingPackCard({ pack, onPress }: TrendingPackCardProps) {
 const styles = StyleSheet.create((theme) => ({
 	card: {
 		width: 140,
-		backgroundColor: theme.colors.surfaceElevated,
-		borderRadius: 12,
+		backgroundColor: "#1A1A1A", // Dark Brutalist card background
+		borderRadius: 4, // Sharp corners
 		padding: theme.spacing.md,
-		borderWidth: 1,
-		borderColor: theme.colors.glassBorder,
+		borderWidth: 2,
+		borderColor: "#000000",
+		shadowColor: "#000000",
+		shadowOpacity: 1,
+		shadowRadius: 0,
+		shadowOffset: { width: 4, height: 4 },
+		elevation: 4,
 	},
 	thumb: {
 		height: 80,
-		backgroundColor: "rgba(255, 255, 255, 0.03)",
-		borderRadius: 8,
+		backgroundColor: "#000000",
+		borderWidth: 1.5,
+		borderColor: "#000000",
+		borderRadius: 2,
 		alignItems: "center",
 		justifyContent: "center",
 		marginBottom: theme.spacing.sm,
+		overflow: "hidden",
+	},
+	previewImage: {
+		width: 60,
+		height: 60,
 	},
 	emoji: {
-		fontSize: 36,
+		fontSize: 34,
 	},
 	name: {
-		color: theme.colors.foreground,
+		color: "#FFFFFF",
 		fontSize: theme.fontSize.sm,
-		fontWeight: theme.fontWeight.bold,
+		fontWeight: "900",
 		letterSpacing: -0.1,
 	},
 	creator: {
-		color: theme.colors.muted,
+		color: "#FFF500", // Cyber-Yellow accent
 		fontSize: theme.fontSize.xs,
+		fontWeight: "700",
 		marginTop: 2,
 		marginBottom: theme.spacing.sm,
 	},
 	statsRow: {
 		flexDirection: "row",
 		gap: theme.spacing.sm,
-		borderTopWidth: StyleSheet.hairlineWidth,
-		borderColor: theme.colors.glassBorder,
+		borderTopWidth: 1.5,
+		borderColor: "#000000",
 		paddingTop: theme.spacing.xs,
 	},
 	statItem: {
@@ -121,7 +139,7 @@ const styles = StyleSheet.create((theme) => ({
 	statVal: {
 		color: theme.colors.foreground,
 		fontSize: 10,
-		fontWeight: theme.fontWeight.semibold,
+		fontWeight: "700",
 	},
 }));
 

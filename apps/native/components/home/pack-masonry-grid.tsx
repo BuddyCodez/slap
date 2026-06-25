@@ -1,6 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
-import { Pressable, Text, View } from "react-native";
+import { Pressable, Text, View, Image } from "react-native";
 import Animated, {
 	useAnimatedStyle,
 	useSharedValue,
@@ -8,13 +8,12 @@ import Animated, {
 } from "react-native-reanimated";
 import { StyleSheet, useUnistyles } from "react-native-unistyles";
 
-import type { MockPack } from "@/constants/mock-packs";
 import { formatCount } from "@/utils/format";
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
 type PackRowProps = {
-	pack: MockPack;
+	pack: any;
 	isLast?: boolean;
 	onPress?: () => void;
 };
@@ -39,6 +38,8 @@ function PackRow({ pack, isLast = false, onPress }: PackRowProps) {
 		opacity.value = withSpring(1, { damping: 12, stiffness: 280 });
 	};
 
+	const imageUrl = pack.thumbnail || pack.stickers?.[0]?.url;
+
 	return (
 		<AnimatedPressable
 			onPress={() => {
@@ -49,9 +50,13 @@ function PackRow({ pack, isLast = false, onPress }: PackRowProps) {
 			onPressOut={handlePressOut}
 			style={[styles.row, animatedStyle]}
 		>
-			{/* Left Emoji Badge */}
+			{/* Left Preview Image/Emoji Badge */}
 			<View style={styles.emojiContainer}>
-				<Text style={styles.rowEmoji}>{pack.emoji}</Text>
+				{imageUrl ? (
+					<Image source={{ uri: imageUrl }} style={styles.rowImage} resizeMode="contain" />
+				) : (
+					<Text style={styles.rowEmoji}>{pack.emoji || "⚡"}</Text>
+				)}
 			</View>
 
 			{/* Middle Text Info */}
@@ -60,7 +65,7 @@ function PackRow({ pack, isLast = false, onPress }: PackRowProps) {
 					{pack.name}
 				</Text>
 				<View style={styles.metaRow}>
-					<Text style={styles.rowCreator}>@{pack.creator.name}</Text>
+					<Text style={styles.rowCreator}>@{pack.creator?.name || "user"}</Text>
 					<Text style={styles.dotSeparator}>•</Text>
 					<Ionicons
 						name="download-outline"
@@ -85,7 +90,7 @@ function PackRow({ pack, isLast = false, onPress }: PackRowProps) {
 }
 
 type PackMasonryGridProps = {
-	packs: MockPack[];
+	packs: any[];
 	title?: string;
 };
 
@@ -118,7 +123,7 @@ export function PackMasonryGrid({
 				<Text style={styles.count}>{packs.length} items</Text>
 			</View>
 
-			{/* Apple Inset Grouped List Card */}
+			{/* Neo-Brutalist Grouped List Card */}
 			<View style={styles.listContainer}>
 				{packs.map((pack, index) => (
 					<PackRow
@@ -155,11 +160,16 @@ const styles = StyleSheet.create((theme) => ({
 		fontWeight: theme.fontWeight.bold,
 	},
 	listContainer: {
-		backgroundColor: theme.colors.surfaceElevated,
-		borderRadius: 12,
-		borderWidth: 1,
-		borderColor: theme.colors.glassBorder,
+		backgroundColor: "#1A1A1A", // Dark Brutalist surface
+		borderRadius: 4, // Sharp corners
+		borderWidth: 2,
+		borderColor: "#000000",
 		overflow: "hidden",
+		shadowColor: "#000000",
+		shadowOpacity: 1,
+		shadowRadius: 0,
+		shadowOffset: { width: 4, height: 4 },
+		elevation: 4,
 	},
 	row: {
 		flexDirection: "row",
@@ -171,11 +181,18 @@ const styles = StyleSheet.create((theme) => ({
 	emojiContainer: {
 		width: 44,
 		height: 44,
-		borderRadius: 8,
-		backgroundColor: "rgba(255,255,255,0.03)",
+		borderRadius: 2,
+		borderWidth: 1.5,
+		borderColor: "#000000",
+		backgroundColor: "#000000",
 		alignItems: "center",
 		justifyContent: "center",
 		marginRight: theme.spacing.md,
+		overflow: "hidden",
+	},
+	rowImage: {
+		width: 38,
+		height: 38,
 	},
 	rowEmoji: {
 		fontSize: 22,
@@ -186,9 +203,9 @@ const styles = StyleSheet.create((theme) => ({
 		marginRight: theme.spacing.md,
 	},
 	rowName: {
-		color: theme.colors.foreground,
+		color: "#FFFFFF",
 		fontSize: theme.fontSize.base - 1,
-		fontWeight: theme.fontWeight.bold,
+		fontWeight: "900", // Heavy block font weight
 		letterSpacing: -0.15,
 	},
 	metaRow: {
@@ -197,8 +214,9 @@ const styles = StyleSheet.create((theme) => ({
 		marginTop: 2,
 	},
 	rowCreator: {
-		color: theme.colors.muted,
+		color: "#FFF500", // Cyber-Yellow accent
 		fontSize: theme.fontSize.xs,
+		fontWeight: "700",
 	},
 	dotSeparator: {
 		color: theme.colors.muted,
@@ -214,26 +232,32 @@ const styles = StyleSheet.create((theme) => ({
 		justifyContent: "center",
 	},
 	getButton: {
-		backgroundColor: theme.colors.primary,
-		borderRadius: 15,
+		backgroundColor: "#FFF500", // Cyber-Yellow button
+		borderRadius: 4, // Sharp corners
+		borderWidth: 2,
+		borderColor: "#000000",
 		paddingHorizontal: theme.spacing.md,
 		paddingVertical: 5,
 		minWidth: 54,
 		alignItems: "center",
+		shadowColor: "#000000",
+		shadowOpacity: 1,
+		shadowRadius: 0,
+		shadowOffset: { width: 2, height: 2 },
 	},
 	getButtonText: {
-		color: theme.colors.primaryForeground,
+		color: "#000000",
 		fontSize: 11,
-		fontWeight: theme.fontWeight.black,
+		fontWeight: "900", // Extra heavy font weight
 		letterSpacing: 0.2,
 	},
 	divider: {
 		position: "absolute",
 		bottom: 0,
-		left: 44 + 16 + 16, // aligns with content text
+		left: 44 + 16 + 16,
 		right: 0,
-		height: StyleSheet.hairlineWidth,
-		backgroundColor: theme.colors.glassBorder,
+		height: 2,
+		backgroundColor: "#000000", // Strong black divider line
 	},
 	emptyState: {
 		alignItems: "center",

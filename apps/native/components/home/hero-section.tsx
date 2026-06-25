@@ -9,6 +9,7 @@ import Animated, {
 } from "react-native-reanimated";
 import { StyleSheet } from "react-native-unistyles";
 
+import { authClient } from "@/lib/auth-client";
 import { formatCount } from "@/utils/format";
 
 type HeroSectionProps = {
@@ -18,6 +19,9 @@ type HeroSectionProps = {
 export function HeroSection({ slapCount = 12_432 }: HeroSectionProps) {
 	const scale = useSharedValue(0.97);
 	const opacity = useSharedValue(0);
+
+	const { data: session } = authClient.useSession();
+	const name = session?.user?.name || "user";
 
 	useEffect(() => {
 		scale.value = withDelay(
@@ -37,14 +41,14 @@ export function HeroSection({ slapCount = 12_432 }: HeroSectionProps) {
 			{/* Title Header */}
 			<View style={styles.headerRow}>
 				<View>
-					<Text style={styles.title}>SLAP Sticker Hub</Text>
+					<Text style={styles.title}>HEY, @{name.toUpperCase()} ⚡</Text>
 					<Text style={styles.subtitle}>
-						Discover, share, and save premium stickers
+						YOUR STICKER ARCHIVE. EVERYWHERE.
 					</Text>
 				</View>
 			</View>
 
-			{/* Modern minimal metrics box (Apple Health / Activity style) */}
+			{/* Modern minimal metrics box (Brutalist style) */}
 			<View style={styles.statsCard}>
 				<View style={styles.pulseContainer}>
 					<View style={styles.pulseDot} />
@@ -71,24 +75,30 @@ const styles = StyleSheet.create((theme) => ({
 	title: {
 		color: theme.colors.foreground,
 		fontSize: theme.fontSize["2xl"] + 2,
-		fontWeight: theme.fontWeight.black,
-		letterSpacing: -0.6,
+		fontWeight: "900", // Industrial block text
+		letterSpacing: -0.8,
 	},
 	subtitle: {
-		color: theme.colors.muted,
-		fontSize: theme.fontSize.sm,
+		color: "#FFF500", // Cyber-Yellow subtitle accent
+		fontSize: theme.fontSize.xs + 1,
+		fontWeight: "900",
 		marginTop: 4,
 	},
 	statsCard: {
 		flexDirection: "row",
 		alignItems: "center",
-		backgroundColor: theme.colors.surfaceElevated,
-		borderRadius: 12,
-		borderWidth: 1,
-		borderColor: theme.colors.glassBorder,
+		backgroundColor: "#1A1A1A",
+		borderRadius: 4, // Sharp corners
+		borderWidth: 2,
+		borderColor: "#000000",
 		paddingHorizontal: theme.spacing.lg,
 		paddingVertical: theme.spacing.md,
 		gap: theme.spacing.md,
+		shadowColor: "#000000",
+		shadowOpacity: 1,
+		shadowRadius: 0,
+		shadowOffset: { width: 3, height: 3 },
+		elevation: 3,
 	},
 	pulseContainer: {
 		width: 24,
@@ -100,7 +110,7 @@ const styles = StyleSheet.create((theme) => ({
 		width: 8,
 		height: 8,
 		borderRadius: 4,
-		backgroundColor: theme.colors.primary,
+		backgroundColor: "#FFF500", // Cyber-Yellow pulse dot
 		zIndex: 2,
 	},
 	pulseRing: {
@@ -108,8 +118,8 @@ const styles = StyleSheet.create((theme) => ({
 		width: 16,
 		height: 16,
 		borderRadius: 8,
-		backgroundColor: theme.colors.primary,
-		opacity: 0.15,
+		backgroundColor: "#FFF500",
+		opacity: 0.25,
 	},
 	statsTextWrap: {
 		flex: 1,
@@ -118,13 +128,13 @@ const styles = StyleSheet.create((theme) => ({
 		gap: 6,
 	},
 	statsVal: {
-		color: theme.colors.foreground,
+		color: "#FFFFFF",
 		fontSize: theme.fontSize.lg,
-		fontWeight: theme.fontWeight.black,
+		fontWeight: "900",
 	},
 	statsLabel: {
 		color: theme.colors.muted,
 		fontSize: theme.fontSize.xs,
-		fontWeight: theme.fontWeight.medium,
+		fontWeight: "700",
 	},
 }));

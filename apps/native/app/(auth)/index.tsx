@@ -14,6 +14,7 @@ import Animated, {
 } from "react-native-reanimated";
 import { StyleSheet, useUnistyles } from "react-native-unistyles";
 
+import { router } from "expo-router";
 import { OtpBottomSheet } from "@/components/auth/otp-bottom-sheet";
 import { authClient } from "@/lib/auth-client";
 import { queryClient, client } from "@/utils/orpc";
@@ -103,6 +104,14 @@ export default function AuthScreen() {
 	const [error, setError] = useState<string | null>(null);
 	const [loading, setLoading] = useState(false);
 	const [sheetVisible, setSheetVisible] = useState(false);
+
+	const { data: session } = authClient.useSession();
+
+	useEffect(() => {
+		if (session) {
+			router.replace("/(tabs)");
+		}
+	}, [session]);
 
 	const loadingRef = useRef(loading);
 	useEffect(() => {
@@ -249,6 +258,7 @@ export default function AuthScreen() {
 				setError(null);
 				setLoading(false);
 				queryClient.invalidateQueries();
+				router.replace("/(tabs)");
 			}
 		} catch (e) {
 			setError("An unexpected error occurred");
@@ -507,23 +517,29 @@ const styles = StyleSheet.create((theme) => ({
 		marginTop: 2,
 	},
 	tickerContainer: {
+		backgroundColor: "#FFF500", // Solid Cyber-Yellow background
 		borderTopWidth: 3,
 		borderBottomWidth: 3,
-		borderColor: "#FFF500",
-		paddingVertical: 10,
-		backgroundColor: "#000000",
-		marginVertical: theme.spacing.md,
+		borderColor: "#000000",
+		paddingVertical: 12,
+		transform: [{ rotate: "-2.5deg" }, { scale: 1.05 }], // Angled and scaled to pop
+		marginVertical: theme.spacing.md + 6,
 		overflow: "hidden",
+		shadowColor: "#000000",
+		shadowOpacity: 1,
+		shadowRadius: 0,
+		shadowOffset: { width: 4, height: 4 },
+		elevation: 5,
 	},
 	tickerRow: {
 		flexDirection: "row",
 		width: 1000,
 	},
 	tickerText: {
-		color: "#FFF500",
-		fontSize: theme.fontSize.xs + 1,
+		color: "#000000", // Black text on yellow background
+		fontSize: 12,
 		fontWeight: "900",
-		letterSpacing: 1,
+		letterSpacing: 1.8,
 	},
 	socialProof: {
 		alignItems: "center",

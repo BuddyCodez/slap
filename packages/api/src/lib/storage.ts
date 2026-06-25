@@ -25,7 +25,7 @@ export async function uploadObject(input: {
 }) {
 	const response = await r2Client.fetch(objectUrl(input.key), {
 		method: "PUT",
-		body: input.body,
+		body: input.body as any,
 		headers: {
 			"content-type": input.contentType,
 		},
