@@ -31,10 +31,7 @@ const packInclude = {
 
 type PackWithRelations = Prisma.PackGetPayload<{ include: typeof packInclude }>;
 
-const fileSchema = z.custom<File>(
-	(value) => typeof File !== "undefined" && value instanceof File,
-	"Expected a file upload",
-);
+const fileSchema = z.instanceof(File);
 
 const paginationInput = z.object({
 	limit: z.number().int().min(1).max(50).default(20),
@@ -266,12 +263,24 @@ export const packsRouter = {
 				...new Set(input.tags.map((tag) => tag.toLowerCase())),
 			];
 
+			const normalizedCategory = input.category
+				? input.category.toLowerCase().trim()
+				: undefined;
+
+			if (normalizedCategory) {
+				await prisma.category.upsert({
+					where: { name: normalizedCategory },
+					update: {},
+					create: { name: normalizedCategory },
+				});
+			}
+
 			const pack = await prisma.pack.create({
 				data: {
 					creatorId: userId,
 					name: input.name,
 					description: input.description,
-					category: input.category,
+					category: normalizedCategory,
 					status: PackStatus.PROCESSING,
 					tags: {
 						create: normalizedTags.map((name) => ({
@@ -463,6 +472,32 @@ export const packsRouter = {
 				thumbnail: pack.thumbnail,
 				createdAt: pack.createdAt,
 				stickers: pack.stickers,
+			};
+		}),
+
+	myPacks: protectedProcedure
+		.input(paginationInput)
+		.handler(async ({ input, context }) => {
+			const packs = await prisma.pack.findMany({
+				where: {
+					creatorId: context.session.user.id,
+				},
+				include: packInclude,
+				orderBy: { createdAt: "desc" },
+				skip: input.cursor,
+				take: input.limit + 1,
+			});
+
+			const page = packs.slice(0, input.limit);
+			const savedPackIds = await getSavedPackIds(
+				context.session?.user.id,
+				page.map((pack) => pack.id),
+			);
+
+			return {
+				items: page.map((pack) => mapPack(pack, savedPackIds.has(pack.id))),
+				nextCursor:
+					packs.length > input.limit ? input.cursor + input.limit : undefined,
 			};
 		}),
 };
@@ -719,6 +754,32 @@ export const tagsRouter = {
 				packCount: tag._count.packs,
 			}))
 			.filter((tag) => tag.packCount > 0)
+			.toSorted(
+				(a, b) => b.packCount - a.packCount || a.name.localeCompare(b.name),
+			);
+	}),
+};
+
+export const categoriesRouter = {
+	list: publicProcedure.handler(async () => {
+		const categories = await prisma.category.findMany({
+			orderBy: { name: "asc" },
+		});
+
+		const counts = await prisma.pack.groupBy({
+			by: ["category"],
+			where: { status: PackStatus.READY, category: { not: null } },
+			_count: { id: true },
+		});
+
+		const countMap = new Map(counts.map((c) => [c.category, c._count.id]));
+
+		return categories
+			.map((cat) => ({
+				id: cat.id,
+				name: cat.name,
+				packCount: countMap.get(cat.name) ?? 0,
+			}))
 			.toSorted(
 				(a, b) => b.packCount - a.packCount || a.name.localeCompare(b.name),
 			);

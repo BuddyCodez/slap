@@ -4,6 +4,7 @@ import prisma from "@slap/db";
 import { z } from "zod";
 import { protectedProcedure, publicProcedure } from "../index";
 import {
+	categoriesRouter,
 	downloadRouter,
 	packsRouter,
 	savesRouter,
@@ -36,6 +37,7 @@ export const appRouter = {
 	saves: savesRouter,
 	download: downloadRouter,
 	tags: tagsRouter,
+	categories: categoriesRouter,
 	profile: profileRouter,
 };
 export type AppRouter = typeof appRouter;

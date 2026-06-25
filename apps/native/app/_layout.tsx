@@ -4,6 +4,19 @@ import { StatusBar } from "expo-status-bar";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { StyleSheet } from "react-native-unistyles";
 
+if (typeof global.File === "undefined") {
+	class File extends Blob {
+		name: string;
+		lastModified: number;
+		constructor(parts: any[], filename: string, options?: any) {
+			super(parts, options);
+			this.name = filename;
+			this.lastModified = options?.lastModified || Date.now();
+		}
+	}
+	global.File = File as any;
+}
+
 import { queryClient } from "@/utils/orpc";
 
 import "../unistyles";

@@ -8,14 +8,14 @@ const allowedMimeTypes = new Set([
 	"image/jpeg",
 ]);
 
-const maxStickerBytes = 512 * 1024;
+const maxStickerBytes = 2 * 1024 * 1024;
 
 export async function validateStickerUpload(file: File) {
 	const buffer = Buffer.from(await file.arrayBuffer());
 
 	if (buffer.byteLength > maxStickerBytes) {
 		throw new ORPCError("BAD_REQUEST", {
-			message: "Sticker exceeds 512KB",
+			message: "Sticker exceeds 2MB",
 		});
 	}
 
