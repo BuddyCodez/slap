@@ -174,7 +174,7 @@ export default function PackDetailScreen() {
             onPress={handleBack}
             style={[styles.floatingBack, backAnimStyle]}
           >
-            <Ionicons name="arrow-back" size={18} color="#FFFFFF" />
+            <Ionicons name="chevron-back" size={16} color="#FFFFFF" />
           </AnimatedPressable>
 
           <FlatList
@@ -407,7 +407,7 @@ const styles = StyleSheet.create((theme) => ({
     borderWidth: 1,
     borderColor: "#222222",
     alignItems: "center",
-    justify: "center",
+    justifyContent: "center",
   },
   gridContent: {
     paddingBottom: theme.spacing["4xl"],
