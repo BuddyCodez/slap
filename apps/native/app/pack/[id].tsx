@@ -154,7 +154,13 @@ export default function PackDetailScreen() {
   };
 
   if (!pack) {
-    return null;
+    return (
+      <Screen scrollable={false}>
+        <View style={styles.loaderWrap}>
+          <Text style={styles.loaderText}>UFF SOMETHING WENT WRONG!</Text>
+        </View>
+      </Screen>
+    );
   }
 
   const stickerPreview = pack.stickers.slice(0, 3);
