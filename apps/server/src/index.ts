@@ -428,6 +428,106 @@ new Elysia()
 		},
 		{ parse: "none" },
 	)
+	.post(
+		"/api/profile/upload-photo",
+		async (context) => {
+			const { request } = context;
+			const formData = await request.formData();
+
+			const session = await auth.api.getSession({ headers: request.headers });
+			if (!session?.user) {
+				return new Response(JSON.stringify({ error: "Unauthorized" }), {
+					status: 401,
+					headers: { "Content-Type": "application/json" },
+				});
+			}
+
+			const photoData = formData.get("photo") as string | null;
+
+			if (!photoData) {
+				return new Response(
+					JSON.stringify({ error: "Photo data is required" }),
+					{ status: 400, headers: { "Content-Type": "application/json" } },
+				);
+			}
+
+			try {
+				const parsed = JSON.parse(photoData);
+				const base64 = parsed.data as string;
+				const mimeType = parsed.type as string;
+
+				if (!base64 || !mimeType) {
+					return new Response(
+						JSON.stringify({ error: "Invalid photo data format" }),
+						{ status: 400, headers: { "Content-Type": "application/json" } },
+					);
+				}
+
+				// Validate MIME type
+				const allowedMimeTypes = ["image/png", "image/webp", "image/gif", "image/jpeg"];
+				if (!allowedMimeTypes.includes(mimeType)) {
+					return new Response(
+						JSON.stringify({ error: "Only PNG, WebP, GIF, and JPEG photos are supported" }),
+						{ status: 400, headers: { "Content-Type": "application/json" } },
+					);
+				}
+
+				// Decode base64 to Buffer
+				const raw = Buffer.from(base64, "base64");
+
+				// Validate size limit (5MB for profile photos)
+				const maxPhotoBytes = 5 * 1024 * 1024;
+				if (raw.byteLength > maxPhotoBytes) {
+					return new Response(
+						JSON.stringify({ error: "Photo exceeds 5MB" }),
+						{ status: 400, headers: { "Content-Type": "application/json" } },
+					);
+				}
+
+				// Process image to WebP
+				const result = await processImageToWebp(raw, "Profile Photo");
+
+				// Upload to storage
+				const photoKey = `users/${session.user.id}/profile-photo.webp`;
+				await uploadObject({
+					key: photoKey,
+					body: result.webp,
+					contentType: "image/webp",
+				});
+
+				const photoUrl = toPublicUrl(photoKey);
+
+				// Update user profile
+				const updatedUser = await prisma.user.update({
+					where: { id: session.user.id },
+					data: { image: photoUrl },
+					select: {
+						id: true,
+						name: true,
+						email: true,
+						username: true,
+						bio: true,
+						image: true,
+						createdAt: true,
+					},
+				});
+
+				return new Response(JSON.stringify(updatedUser), {
+					status: 200,
+					headers: { "Content-Type": "application/json" },
+				});
+			} catch (error) {
+				console.error("Profile photo upload error:", error);
+				const message =
+					error instanceof Error ? error.message : "Failed to upload photo";
+				return new Response(JSON.stringify({ error: message }), {
+					status: 500,
+					headers: { "Content-Type": "application/json" },
+				});
+			}
+		},
+		{ parse: "none" },
+	)
 	.get("/", () => "OK")
 	.listen(3000, () => {
 		console.log("Server is running on http://localhost:3000");

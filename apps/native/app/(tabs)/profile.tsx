@@ -79,16 +79,7 @@ function EditProfileSheet({
 		},
 	});
 
-	const uploadPhotoMutation = useMutation({
-		...orpc.profile.uploadPhoto.mutationOptions(),
-		onSuccess: () => {
-			localQC.invalidateQueries({ queryKey: orpc.profile.me.queryKey() });
-			setError(null);
-		},
-		onError: (err: any) => {
-			setError(err?.message || "Photo upload failed. Try again.");
-		},
-	});
+	const [isUploading, setIsUploading] = useState(false);
 
 	const handlePhotoSelect = async () => {
 		try {
@@ -105,27 +96,61 @@ function EditProfileSheet({
 				if (!asset.uri) return;
 
 				try {
+					setIsUploading(true);
+					setError(null);
+
 					// Read file as base64 (same approach as sticker upload)
 					const base64 = await FileSystem.readAsStringAsync(asset.uri, {
 						encoding: FileSystem.EncodingType.Base64,
 					});
 
-					// Create File-like object with base64 data
 					const mimeType = asset.type || "image/jpeg";
 
-					// Convert base64 to Blob
-					const binaryString = atob(base64);
-					const bytes = new Uint8Array(binaryString.length);
-					for (let i = 0; i < binaryString.length; i++) {
-						bytes[i] = binaryString.charCodeAt(i);
-					}
-					const blob = new Blob([bytes], { type: mimeType });
+					// Create FormData with base64 JSON payload
+					const photoPayload = JSON.stringify({
+						data: base64,
+						type: mimeType,
+					});
 
-					setError(null);
+					const formData = new FormData();
+					formData.append("photo", photoPayload);
+
+					// Get auth cookie
+					const cookie = await authClient.getCookie();
+
+					// Upload photo via FormData endpoint
+					const response = await fetch(
+						`${process.env.EXPO_PUBLIC_API_URL || "http://localhost:3000"}/api/profile/upload-photo`,
+						{
+							method: "POST",
+							body: formData,
+							headers: {
+								...(cookie ? { Cookie: cookie } : {}),
+							},
+						},
+					);
+
+					if (!response.ok) {
+						let errorMessage = "Failed to upload photo. Try again.";
+						try {
+							const errorData = await response.json();
+							if (typeof errorData === 'object' && errorData !== null && 'error' in errorData) {
+								errorMessage = String(errorData.error);
+							}
+						} catch {
+							// response.json() failed, keep generic message
+						}
+						throw new Error(errorMessage);
+					}
+
 					void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-					uploadPhotoMutation.mutate({ photo: blob });
+					localQC.invalidateQueries({ queryKey: orpc.profile.me.queryKey() });
 				} catch (uploadErr) {
-					setError("Failed to process photo. Try again.");
+					const message =
+						uploadErr instanceof Error ? uploadErr.message : "Failed to upload photo.";
+					setError(message);
+				} finally {
+					setIsUploading(false);
 				}
 			}
 		} catch (err) {
@@ -158,7 +183,7 @@ function EditProfileSheet({
 	};
 
 	const panGesture = Gesture.Pan()
-		.enabled(!uploadPhotoMutation.isPending && !isPickerOpen)
+		.enabled(!isUploading && !isPickerOpen)
 		.onChange((e) => {
 			translateY.value = Math.max(0, e.translationY);
 		})
@@ -230,11 +255,11 @@ function EditProfileSheet({
 							<Text style={sheet.fieldLabel}>PROFILE PHOTO</Text>
 							<Pressable
 								onPress={handlePhotoSelect}
-								disabled={uploadPhotoMutation.isPending}
+								disabled={isUploading}
 								style={({ pressed }) => [
 									sheet.photoBtn,
 									pressed && { opacity: 0.85 },
-									uploadPhotoMutation.isPending && { opacity: 0.5 },
+									isUploading && { opacity: 0.5 },
 								]}
 							>
 								<>
