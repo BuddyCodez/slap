@@ -174,7 +174,7 @@ export default function PackDetailScreen() {
             onPress={handleBack}
             style={[styles.floatingBack, backAnimStyle]}
           >
-            <Ionicons name="chevron-back" size={16} color="#FFFFFF" />
+            <Ionicons name="arrow-back" size={18} color="#FFFFFF" />
           </AnimatedPressable>
 
           <FlatList
