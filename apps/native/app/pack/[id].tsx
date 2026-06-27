@@ -153,15 +153,8 @@ export default function PackDetailScreen() {
     router.back();
   };
 
-  if (isLoading || !pack) {
-    return (
-      <Screen scrollable={false}>
-        <View style={styles.loaderWrap}>
-          <DotMatrixLoader size={56} />
-          <Text style={styles.loaderText}>LOADING PACK...</Text>
-        </View>
-      </Screen>
-    );
+  if (!pack) {
+    return null;
   }
 
   const stickerPreview = pack.stickers.slice(0, 3);
