@@ -5,7 +5,9 @@ import * as Haptics from "expo-haptics";
 import * as ImagePicker from "expo-image-picker";
 import { useEffect, useState } from "react";
 import {
+	ActivityIndicator,
 	Dimensions,
+	Image,
 	Keyboard,
 	Pressable,
 	ScrollView,
@@ -53,7 +55,6 @@ function EditProfileSheet({
 	const [username, setUsername] = useState(initialUsername);
 	const [bio, setBio] = useState(initialBio);
 	const [error, setError] = useState<string | null>(null);
-	const [isPickerOpen, setIsPickerOpen] = useState(false);
 
 	const localQC = useQueryClient();
 
@@ -63,8 +64,6 @@ function EditProfileSheet({
 			setUsername(initialUsername);
 			setBio(initialBio);
 			setError(null);
-		} else {
-			setIsPickerOpen(false);
 		}
 	}, [visible, initialName, initialUsername, initialBio]);
 
@@ -78,91 +77,6 @@ function EditProfileSheet({
 			setError(err?.message || "Update failed. Try again.");
 		},
 	});
-
-	const [isUploading, setIsUploading] = useState(false);
-
-	const handlePhotoSelect = async () => {
-		try {
-			setIsPickerOpen(true);
-			const result = await ImagePicker.launchImageLibraryAsync({
-				mediaTypes: ["images"],
-				allowsEditing: true,
-				aspect: [1, 1],
-				quality: 0.8,
-			});
-
-			if (!result.canceled) {
-				const asset = result.assets[0];
-				if (!asset.uri) return;
-
-				try {
-					setIsUploading(true);
-					setError(null);
-
-					// Read file as base64 (same approach as sticker upload)
-					const base64 = await FileSystem.readAsStringAsync(asset.uri, {
-						encoding: FileSystem.EncodingType.Base64,
-					});
-
-					const mimeType = asset.type || "image/jpeg";
-
-					// Create FormData with base64 JSON payload
-					const photoPayload = JSON.stringify({
-						data: base64,
-						type: mimeType,
-					});
-
-					const formData = new FormData();
-					formData.append("photo", photoPayload);
-
-					// Get auth cookie
-					const cookie = await authClient.getCookie();
-
-					// Upload photo via FormData endpoint
-					const response = await fetch(
-						`${process.env.EXPO_PUBLIC_API_URL || "http://localhost:3000"}/api/profile/upload-photo`,
-						{
-							method: "POST",
-							body: formData,
-							headers: {
-								...(cookie ? { Cookie: cookie } : {}),
-							},
-						},
-					);
-
-					if (!response.ok) {
-						let errorMessage = "Failed to upload photo. Try again.";
-						try {
-							const errorData = await response.json();
-							if (typeof errorData === 'object' && errorData !== null && 'error' in errorData) {
-								errorMessage = String(errorData.error);
-							}
-						} catch {
-							// response.json() failed, keep generic message
-						}
-						throw new Error(errorMessage);
-					}
-
-					void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-					localQC.invalidateQueries({ queryKey: orpc.profile.me.queryKey() });
-				} catch (uploadErr) {
-					const message =
-						uploadErr instanceof Error ? uploadErr.message : "Failed to upload photo.";
-					setError(message);
-				} finally {
-					setIsUploading(false);
-				}
-			}
-		} catch (err) {
-			if (err instanceof Error && err.message.includes("User cancelled")) {
-				// User cancelled the picker, don't show error
-				return;
-			}
-			setError("Failed to select photo. Try again.");
-		} finally {
-			setIsPickerOpen(false);
-		}
-	};
 
 	const translateY = useSharedValue(SCREEN_H);
 
@@ -183,7 +97,7 @@ function EditProfileSheet({
 	};
 
 	const panGesture = Gesture.Pan()
-		.enabled(!isUploading && !isPickerOpen)
+		.enabled(!error)
 		.onChange((e) => {
 			translateY.value = Math.max(0, e.translationY);
 		})
@@ -217,7 +131,7 @@ function EditProfileSheet({
 				<Pressable
 					style={StyleSheet.absoluteFill}
 					onPress={close}
-					pointerEvents={isPickerOpen ? "none" : "auto"}
+					pointerEvents={error ? "none" : "auto"}
 				/>
 			</Animated.View>
 
@@ -231,18 +145,29 @@ function EditProfileSheet({
 					{/* Header */}
 					<View style={sheet.header}>
 						<Text style={sheet.title}>EDIT PROFILE ✏️</Text>
-						<Pressable onPress={close} style={sheet.closeBtn} hitSlop={12}>
-							<Ionicons name="close" size={20} color="#A3A3B3" />
+						<Pressable
+							onPress={close}
+							style={sheet.closeBtn}
+							hitSlop={12}
+							disabled={!!error}
+							opacity={error ? 0.5 : 1}
+						>
+							<Ionicons name="close" size={20} color={error ? "#666" : "#A3A3B3"} />
 						</Pressable>
 					</View>
 
 					<Text style={sheet.subtitle}>Update your display info below.</Text>
 
 					{error && (
-						<View style={sheet.errorBanner}>
+						<Pressable
+							style={sheet.errorBanner}
+							onPress={() => setError(null)}
+							hitSlop={8}
+						>
 							<Ionicons name="alert-circle" size={14} color="#fff" />
 							<Text style={sheet.errorText}>{error}</Text>
-						</View>
+							<Text style={sheet.errorDismiss}>✕</Text>
+						</Pressable>
 					)}
 
 					<ScrollView
@@ -250,25 +175,6 @@ function EditProfileSheet({
 						showsVerticalScrollIndicator={false}
 						contentContainerStyle={sheet.scrollContent}
 					>
-						{/* Photo section */}
-						<View style={sheet.fieldGroup}>
-							<Text style={sheet.fieldLabel}>PROFILE PHOTO</Text>
-							<Pressable
-								onPress={handlePhotoSelect}
-								disabled={isUploading}
-								style={({ pressed }) => [
-									sheet.photoBtn,
-									pressed && { opacity: 0.85 },
-									isUploading && { opacity: 0.5 },
-								]}
-							>
-								<>
-									<Ionicons name="image-outline" size={16} color="#000000" />
-									<Text style={sheet.photoBtnText}>CHOOSE PHOTO</Text>
-								</>
-							</Pressable>
-						</View>
-
 						{/* Name */}
 						<View style={sheet.fieldGroup}>
 							<Text style={sheet.fieldLabel}>DISPLAY NAME</Text>
@@ -407,6 +313,9 @@ export default function ProfileScreen() {
 	const { data: session } = authClient.useSession();
 	const { theme } = useUnistyles();
 	const [editSheetVisible, setEditSheetVisible] = useState(false);
+	const [isUploading, setIsUploading] = useState(false);
+	const [isPickerOpen, setIsPickerOpen] = useState(false);
+	const [uploadError, setUploadError] = useState<string | null>(null);
 
 	const { data: profile, isLoading: isLoadingProfile } = useQuery(
 		orpc.profile.me.queryOptions(),
@@ -433,6 +342,87 @@ export default function ProfileScreen() {
 		globalQueryClient.invalidateQueries();
 	};
 
+	const handlePhotoSelect = async () => {
+		try {
+			setIsPickerOpen(true);
+			const result = await ImagePicker.launchImageLibraryAsync({
+				mediaTypes: ["images"],
+				allowsEditing: false,
+				aspect: [1, 1],
+				quality: 1,
+			});
+
+			if (result.canceled) {
+				setIsPickerOpen(false);
+				return;
+			}
+
+			const imageUri = result.assets[0]?.uri;
+			if (!imageUri) {
+				setUploadError("Failed to select image");
+				setTimeout(() => setUploadError(null), 5000);
+				setIsPickerOpen(false);
+				return;
+			}
+
+			setIsUploading(true);
+			void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Start);
+
+			const base64 = await FileSystem.readAsStringAsync(imageUri, {
+				encoding: FileSystem.EncodingType.Base64,
+			});
+
+			const mimeType = imageUri.endsWith(".png")
+				? "image/png"
+				: imageUri.endsWith(".gif")
+					? "image/gif"
+					: imageUri.endsWith(".webp")
+						? "image/webp"
+						: "image/jpeg";
+
+			const formData = new FormData();
+			formData.append(
+				"photo",
+				JSON.stringify({ data: base64, type: mimeType }),
+			);
+
+			const response = await fetch(
+				`${orpc.getBaseURL()}/api/profile/upload-photo`,
+				{
+					method: "POST",
+					body: formData,
+					headers: {
+						Accept: "application/json",
+					},
+					credentials: "include",
+				},
+			);
+
+			if (!response.ok) {
+				const errorData = await response.json();
+				throw new Error(
+					errorData?.error || `Upload failed with status ${response.status}`,
+				);
+			}
+
+			void Haptics.notificationAsync(
+				Haptics.NotificationFeedbackType.Success,
+			);
+			globalQueryClient.invalidateQueries({
+				queryKey: orpc.profile.me.queryKey(),
+			});
+		} catch (error) {
+			const message =
+				error instanceof Error ? error.message : "Failed to upload photo";
+			setUploadError(message);
+			void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+			setTimeout(() => setUploadError(null), 5000);
+		} finally {
+			setIsUploading(false);
+			setIsPickerOpen(false);
+		}
+	};
+
 	const isLoading = isLoadingProfile || isLoadingPacks;
 
 	const displayName = profile?.name ?? session?.user.name ?? "User";
@@ -452,21 +442,47 @@ export default function ProfileScreen() {
 					{/* Avatar */}
 					<View style={styles.avatarSection}>
 						<View style={styles.avatarWrap}>
-							<View style={styles.avatarFallback}>
-								<Text style={styles.avatarText}>{userInitial}</Text>
-							</View>
+							{profile?.image ? (
+								<Image
+									source={{ uri: profile.image }}
+									style={styles.avatarFallback}
+								/>
+							) : (
+								<View style={styles.avatarFallback}>
+									<Text style={styles.avatarText}>{userInitial}</Text>
+								</View>
+							)}
+							{isUploading && (
+								<View style={styles.avatarUploading}>
+									<ActivityIndicator color="#000000" />
+								</View>
+							)}
 							{/* Edit badge */}
 							<Pressable
 								style={styles.avatarEditBadge}
 								onPress={() => {
 									void Haptics.selectionAsync();
-									setEditSheetVisible(true);
+									void handlePhotoSelect();
 								}}
+								disabled={isUploading}
+								opacity={isUploading ? 0.5 : 1}
 							>
 								<Ionicons name="pencil" size={12} color="#000000" />
 							</Pressable>
 						</View>
 					</View>
+
+					{/* Upload Error Banner */}
+					{uploadError && (
+						<Pressable
+							onPress={() => setUploadError(null)}
+							style={styles.avatarError}
+						>
+							<Ionicons name="alert-circle" size={14} color="#fff" />
+							<Text style={styles.avatarErrorText}>{uploadError}</Text>
+							<Text style={styles.avatarErrorDismiss}>✕</Text>
+						</Pressable>
+					)}
 
 					{/* User info */}
 					<View style={styles.userInfo}>
@@ -615,6 +631,11 @@ const sheet = StyleSheet.create((theme) => ({
 		fontWeight: "700",
 		fontSize: 12,
 		flex: 1,
+	},
+	errorDismiss: {
+		color: "#ffffff",
+		fontWeight: "700",
+		fontSize: 14,
 	},
 	scrollContent: {
 		gap: 16,
@@ -782,6 +803,34 @@ const styles = StyleSheet.create((theme) => ({
 		borderColor: "#000000",
 		alignItems: "center",
 		justifyContent: "center",
+	},
+	avatarUploading: {
+		...StyleSheet.absoluteFillObject,
+		backgroundColor: "rgba(255,255,255,0.6)",
+		alignItems: "center",
+		justifyContent: "center",
+		borderRadius: 0,
+	},
+	avatarError: {
+		flexDirection: "row",
+		alignItems: "center",
+		gap: 8,
+		backgroundColor: "#ff3b30",
+		padding: 10,
+		borderWidth: 2,
+		borderColor: "#000000",
+		marginBottom: 16,
+	},
+	avatarErrorText: {
+		color: "#ffffff",
+		fontWeight: "700",
+		fontSize: 12,
+		flex: 1,
+	},
+	avatarErrorDismiss: {
+		color: "#ffffff",
+		fontWeight: "700",
+		fontSize: 14,
 	},
 
 	// User info
