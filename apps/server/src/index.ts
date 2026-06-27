@@ -125,7 +125,21 @@ new Elysia()
 			const description = (formData.get("description") as string)?.trim() || "";
 			const category = (formData.get("category") as string)?.trim();
 			const tagsJson = (formData.get("tags") as string) || "[]";
-			const stickerFiles = formData.getAll("stickers") as File[];
+			const stickerDataStrings = formData.getAll("stickers") as string[];
+
+			// Parse base64-encoded sticker data from React Native
+			const stickerFiles = stickerDataStrings.map((dataStr) => {
+				try {
+					const parsed = JSON.parse(dataStr);
+					return {
+						base64: parsed.data,
+						name: parsed.name,
+						type: parsed.type,
+					};
+				} catch {
+					throw new Error(`Failed to parse sticker data: ${dataStr}`);
+				}
+			});
 
 			console.log("[create-formdata] received:", {
 				name,
@@ -134,11 +148,9 @@ new Elysia()
 				stickerCount: stickerFiles.length,
 				stickerDetails: stickerFiles.map((f, i) => ({
 					index: i,
-					type: typeof f,
-					isFile: f instanceof File,
-					name: f?.name,
-					size: f?.size,
-					mimeType: f?.type,
+					name: f.name,
+					type: f.type,
+					dataLength: f.base64.length,
 				})),
 			});
 
@@ -235,13 +247,20 @@ new Elysia()
 				// Process + upload each sticker inline (fail fast)
 				const processed = await Promise.all(
 					pack.stickers.map(async (sticker, index) => {
-						const file = stickerFiles[index];
-						if (!file) {
-							throw new Error(`Sticker #${index + 1}: missing file`);
+						const stickerData = stickerFiles[index];
+						if (!stickerData) {
+							throw new Error(`Sticker #${index + 1}: missing data`);
 						}
 
-						await validateStickerUpload(file);
-						const raw = Buffer.from(await file.arrayBuffer());
+						// Decode base64 to Buffer
+						const raw = Buffer.from(stickerData.base64, 'base64');
+
+						// Create a File-like object for validation
+						const filelike = {
+							arrayBuffer: async () => raw.buffer.slice(raw.byteOffset, raw.byteOffset + raw.byteLength),
+						} as File;
+
+						await validateStickerUpload(filelike);
 						const result = await processImageToWebp(raw, `Sticker #${index + 1}`);
 
 						const key = finalStickerKey(pack.id, sticker.id);

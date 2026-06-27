@@ -1,6 +1,6 @@
-import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
+import { useInfiniteQuery, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
-import { FlatList, View } from "react-native";
+import { FlatList, View, RefreshControl } from "react-native";
 import { StyleSheet } from "react-native-unistyles";
 import { useRouter } from "expo-router";
 
@@ -11,7 +11,7 @@ import { PackMasonryGrid } from "@/components/home/pack-masonry-grid";
 import { TrendingRow } from "@/components/home/trending-row";
 import { Screen } from "@/components/ui/screen";
 import { SearchBar } from "@/components/ui/search-bar";
-import { DotMatrixLoader } from "@/components/ui/DotMatrixLoader";
+import { PackRowSkeleton } from "@/components/ui/pack-row-skeleton";
 import { orpc, client } from "@/utils/orpc";
 
 type Pack = {
@@ -30,6 +30,7 @@ type Pack = {
 
 export default function HomeScreen() {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const [query, setQuery] = useState("");
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
   const [filtersOpen, setFiltersOpen] = useState(false);
@@ -73,9 +74,22 @@ export default function HomeScreen() {
 
   const isSearching = query.trim().length > 0;
   const shouldShowTrending = !isSearching && !activeCategory;
+  const isInitialLoading = isSearching ? searchQuery.isLoading : listQuery.isLoading;
 
   const handlePackPress = (packId: string) => {
     router.push(`/pack/${packId}`);
+  };
+
+  const handleRefresh = async () => {
+    if (isSearching) {
+      await queryClient.refetchQueries({
+        queryKey: ["packs", "search", { query: query.trim() }],
+      });
+    } else {
+      await queryClient.refetchQueries({
+        queryKey: ["packs", "list", { category: activeCategory, sort: "new" }],
+      });
+    }
   };
 
   const handleLoadMore = () => {
@@ -97,10 +111,19 @@ export default function HomeScreen() {
   return (
     <Screen scrollable={false}>
       <FlatList
-        data={allPacks}
-        keyExtractor={(item) => item.id}
+        data={isInitialLoading ? Array(6).fill(null) : allPacks}
+        keyExtractor={(item, index) =>
+          item ? item.id : `skeleton-${index}`
+        }
         onEndReached={handleLoadMore}
         onEndReachedThreshold={0.3}
+        refreshControl={
+          <RefreshControl
+            refreshing={isInitialLoading}
+            onRefresh={handleRefresh}
+            tintColor="#FFF500"
+          />
+        }
         ListHeaderComponent={
           <View>
             <HeroSection />
@@ -125,17 +148,23 @@ export default function HomeScreen() {
             />
           </View>
         }
-        renderItem={({ item }) => (
-          <PackMasonryGrid
-            packs={[item]}
-            onPackPress={handlePackPress}
-            hideSeparator
-          />
-        )}
+        renderItem={({ item }) =>
+          item ? (
+            <PackMasonryGrid
+              packs={[item]}
+              onPackPress={handlePackPress}
+              hideSeparator
+            />
+          ) : (
+            <PackRowSkeleton />
+          )
+        }
         ListFooterComponent={
           isFetchingNextPage ? (
-            <View style={styles.loaderWrap}>
-              <DotMatrixLoader size={32} color="#FFF500" />
+            <View>
+              <PackRowSkeleton />
+              <PackRowSkeleton />
+              <PackRowSkeleton />
             </View>
           ) : null
         }
@@ -152,10 +181,5 @@ const styles = StyleSheet.create((theme) => ({
   },
   listContent: {
     flexGrow: 1,
-  },
-  loaderWrap: {
-    alignItems: "center",
-    justifyContent: "center",
-    paddingVertical: theme.spacing["2xl"],
   },
 }));

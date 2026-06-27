@@ -1,13 +1,12 @@
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useState } from "react";
-import { Alert, FlatList, Image, Linking, Pressable, Text, View } from "react-native";
+import { Alert, FlatList, Image, Pressable, Text, View } from "react-native";
 import Animated, {
+  SharedValue,
   useAnimatedStyle,
   useSharedValue,
   withRepeat,
-  withSequence,
-  withSpring,
   withTiming,
 } from "react-native-reanimated";
 import { StyleSheet } from "react-native-unistyles";
@@ -32,9 +31,10 @@ export default function PackDetailScreen() {
   const [downloadFeedback, setDownloadFeedback] = useState(false);
   const [whatsappFeedback, setWhatsappFeedback] = useState(false);
 
-  const { data: pack, isLoading } = useQuery(
-    orpc.packs.get.queryOptions({ input: { packId: id || "" } }),
-  );
+  const { data: pack, isLoading } = useQuery({
+    ...orpc.packs.get.queryOptions({ input: { packId: id || "" } }),
+    enabled: !!id,
+  });
 
   const saveMutation = useMutation({
     ...orpc.saves.save.mutationOptions(),
@@ -69,9 +69,9 @@ export default function PackDetailScreen() {
       setTimeout(() => setDownloadFeedback(false), 2000);
     },
     onError: (error: unknown) => {
-      const errorMessage = error instanceof Error ? error.message : "Failed to download pack";
-      Alert.alert("Error", errorMessage, [{ text: "OK" }]);
-    },
+      const errorMessage = error instanceof Error ? error.message : "Failed to download pack to gallery";
+      Alert.alert("Download Error", errorMessage, [{ text: "OK" }]);
+    }
   });
 
   const whatsappMutation = useMutation({
@@ -81,9 +81,9 @@ export default function PackDetailScreen() {
       setTimeout(() => setWhatsappFeedback(false), 2000);
     },
     onError: (error: unknown) => {
-      const errorMessage = error instanceof Error ? error.message : "Failed to add to WhatsApp";
-      Alert.alert("Error", errorMessage, [{ text: "OK" }]);
-    },
+      const errorMessage = error instanceof Error ? error.message : "Failed to export pack to WhatsApp";
+      Alert.alert("WhatsApp Error", errorMessage, [{ text: "OK" }]);
+    }
   });
 
   useEffect(() => {
@@ -105,9 +105,6 @@ export default function PackDetailScreen() {
   const whatsappAnimStyle = useAnimatedStyle(() => ({
     transform: [{ scale: whatsappScale.value }],
   }));
-  const tickerAnimStyle = useAnimatedStyle(() => ({
-    transform: [{ translateX: tickerTranslateX.value }],
-  }));
   const backAnimStyle = useAnimatedStyle(() => ({
     transform: [{ scale: backScale.value }],
   }));
@@ -120,12 +117,15 @@ export default function PackDetailScreen() {
     );
   }, [tickerTranslateX]);
 
+  const triggerMicroInteraction = (scaleValue: SharedValue<number>) => {
+    scaleValue.value = withTiming(0.98, { duration: 40 }, () => {
+      scaleValue.value = withTiming(1, { duration: 80 });
+    });
+  };
+
   const handleSaveToggle = () => {
-    void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    saveScale.value = withSpring(0.95, { damping: 12, stiffness: 300 });
-    setTimeout(() => {
-      saveScale.value = withSpring(1, { damping: 12, stiffness: 300 });
-    }, 100);
+    void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    triggerMicroInteraction(saveScale);
     if (isSaved) {
       unsaveMutation.mutate({ packId: id || "" });
     } else {
@@ -135,28 +135,21 @@ export default function PackDetailScreen() {
 
   const handleDownload = () => {
     void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    downloadScale.value = withSpring(0.95, { damping: 12, stiffness: 300 });
-    setTimeout(() => {
-      downloadScale.value = withSpring(1, { damping: 12, stiffness: 300 });
-    }, 100);
+    triggerMicroInteraction(downloadScale);
     downloadMutation.mutate();
   };
 
   const handleWhatsApp = () => {
     void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    whatsappScale.value = withSpring(0.95, { damping: 12, stiffness: 300 });
-    setTimeout(() => {
-      whatsappScale.value = withSpring(1, { damping: 12, stiffness: 300 });
-    }, 100);
+    triggerMicroInteraction(whatsappScale);
     whatsappMutation.mutate();
   };
 
   const handleBack = () => {
     void Haptics.selectionAsync();
-    backScale.value = withSpring(0.95, { damping: 12, stiffness: 300 });
-    setTimeout(() => {
-      backScale.value = withSpring(1, { damping: 12, stiffness: 300 });
-    }, 100);
+    backScale.value = withTiming(0.96, { duration: 50 }, () => {
+      backScale.value = withTiming(1, { duration: 100 });
+    });
     router.back();
   };
 
@@ -177,12 +170,11 @@ export default function PackDetailScreen() {
     <Screen scrollable={false}>
       <SafeAreaProvider>
         <SafeAreaView>
-          {/* Sticky floating ISO-style back button */}
           <AnimatedPressable
             onPress={handleBack}
             style={[styles.floatingBack, backAnimStyle]}
           >
-            <Ionicons name="chevron-back" size={18} color="#FFF500" />
+            <Ionicons name="chevron-back" size={16} color="#FFFFFF" />
           </AnimatedPressable>
 
           <FlatList
@@ -193,14 +185,10 @@ export default function PackDetailScreen() {
             contentContainerStyle={styles.gridContent}
             ListHeaderComponent={
               <View style={styles.header}>
-                {/* Spacer for floating back button */}
                 <View style={{ height: 56 }} />
 
-                {/* Hero card */}
                 <View style={styles.heroCard}>
-                  {/* Hero shadow */}
                   <View style={styles.heroCardShadow} />
-
                   <View style={styles.thumbWrap}>
                     {pack.thumbnail ? (
                       <Image
@@ -214,7 +202,6 @@ export default function PackDetailScreen() {
                       </View>
                     )}
 
-                    {/* Floating sticker previews */}
                     <View style={styles.stickerPreviews}>
                       {stickerPreview.map((s, i) => (
                         <View
@@ -230,7 +217,6 @@ export default function PackDetailScreen() {
                       ))}
                     </View>
 
-                    {/* Sticker count badge */}
                     <View style={styles.countBadge}>
                       <Text style={styles.countBadgeText}>
                         {pack.stickers.length}
@@ -262,7 +248,6 @@ export default function PackDetailScreen() {
                   </View>
                 </View>
 
-                {/* Stats strip - aggressive blocks */}
                 <View style={styles.statsStrip}>
                   <View style={styles.statBlock}>
                     <View style={styles.statShadow} />
@@ -289,102 +274,69 @@ export default function PackDetailScreen() {
                   </View>
                 </View>
 
-                {/* Marquee ticker */}
-                <View style={styles.tickerContainer}>
-                  <AnimatedView style={[styles.tickerContent, tickerAnimStyle]}>
-                    <Text style={styles.tickerText}>
-                      GRAB IT · SLAP IT · SEND IT · GRAB IT · SLAP IT · SEND IT
-                      ·{" "}
-                    </Text>
-                  </AnimatedView>
-                </View>
-
-                {/* Action buttons — redesigned */}
                 <View style={styles.actions}>
-                  {/* SAVE button — primary accent */}
-                  <AnimatedPressable
-                    onPress={handleSaveToggle}
-                    disabled={
-                      saveMutation.isPending || unsaveMutation.isPending
-                    }
-                    style={[
-                      styles.saveBtn,
-                      isSaved && styles.saveBtnActive,
-                      saveAnimStyle,
-                    ]}
-                  >
-                    <View style={styles.btnShadow} />
-                    <Ionicons
-                      name={isSaved ? "heart" : "heart-outline"}
-                      size={22}
-                      color={isSaved ? "#000000" : "#FFF500"}
-                    />
-                    <Text
-                      style={[
-                        styles.saveBtnLabel,
-                        isSaved && styles.saveBtnLabelActive,
-                      ]}
-                    >
-                      {isSaved ? "SAVED" : "SAVE"}
-                    </Text>
-                  </AnimatedPressable>
-
-                  {/* GET button — white/high contrast */}
                   <AnimatedPressable
                     onPress={handleDownload}
                     disabled={downloadMutation.isPending}
-                    style={[styles.getBtn, downloadAnimStyle]}
+                    style={[styles.actionBtn, downloadAnimStyle]}
                   >
-                    <View style={styles.getBtnShadow} />
                     {downloadMutation.isPending ? (
-                      <DotMatrixLoader size={20} color="#000000" />
+                      <DotMatrixLoader size={16} color="#888888" />
                     ) : (
                       <>
                         <Ionicons
-                          name={
-                            downloadFeedback
-                              ? "checkmark-circle"
-                              : "download-outline"
-                          }
-                          size={22}
-                          color={downloadFeedback ? "#22c55e" : "#000000"}
+                          name={downloadFeedback ? "checkmark" : "download-outline"}
+                          size={18}
+                          color={downloadFeedback ? "#22c55e" : "#FFFFFF"}
                         />
-                        <Text
-                          style={[
-                            styles.getBtnLabel,
-                            downloadFeedback && { color: "#22c55e" },
-                          ]}
-                        >
-                          {downloadFeedback ? "GOT IT!" : "GET"}
+                        <Text style={[styles.actionBtnLabel, downloadFeedback && { color: "#22c55e" }]}>
+                          {downloadFeedback ? "DONE" : "DOWNLOAD"}
                         </Text>
                       </>
                     )}
                   </AnimatedPressable>
 
-                  {/* WhatsApp button — green, icon-only */}
+                  <View style={styles.actionDivider} />
+
+                  <AnimatedPressable
+                    onPress={handleSaveToggle}
+                    disabled={saveMutation.isPending || unsaveMutation.isPending}
+                    style={[styles.actionBtn, saveAnimStyle]}
+                  >
+                    <Ionicons
+                      name={isSaved ? "heart" : "heart-outline"}
+                      size={18}
+                      color={isSaved ? "#FFF500" : "#FFFFFF"}
+                    />
+                    <Text style={[styles.actionBtnLabel, isSaved && { color: "#FFF500" }]}>
+                      {isSaved ? "SAVED" : "SAVE"}
+                    </Text>
+                  </AnimatedPressable>
+
+                  <View style={styles.actionDivider} />
+
                   <AnimatedPressable
                     onPress={handleWhatsApp}
                     disabled={whatsappMutation.isPending}
-                    style={[
-                      styles.waBtn,
-                      whatsappFeedback && styles.waBtnSuccess,
-                      whatsappAnimStyle,
-                    ]}
+                    style={[styles.actionBtn, whatsappAnimStyle]}
                   >
-                    <View style={styles.waBtnShadow} />
                     {whatsappMutation.isPending ? (
-                      <DotMatrixLoader size={20} color="#ffffff" />
+                      <DotMatrixLoader size={16} color="#888888" />
                     ) : (
-                      <Ionicons
-                        name={whatsappFeedback ? "checkmark-circle" : "logo-whatsapp"}
-                        size={24}
-                        color={whatsappFeedback ? "#22c55e" : "#ffffff"}
-                      />
+                      <>
+                        <Ionicons
+                          name={whatsappFeedback ? "checkmark" : "logo-whatsapp"}
+                          size={18}
+                          color={whatsappFeedback ? "#22c55e" : "#FFFFFF"}
+                        />
+                        <Text style={[styles.actionBtnLabel, whatsappFeedback && { color: "#22c55e" }]}>
+                          WHATSAPP
+                        </Text>
+                      </>
                     )}
                   </AnimatedPressable>
                 </View>
 
-                {/* Tags */}
                 {pack.tags.length > 0 && (
                   <View style={styles.tagsWrap}>
                     {pack.tags.map((tag, idx) => (
@@ -405,7 +357,6 @@ export default function PackDetailScreen() {
                   </View>
                 )}
 
-                {/* Section header */}
                 <View style={styles.sectionHeader}>
                   <View style={styles.sectionAccent} />
                   <Text style={styles.sectionTitle}>ALL STICKERS</Text>
@@ -435,7 +386,7 @@ const styles = StyleSheet.create((theme) => ({
   loaderWrap: {
     flex: 1,
     alignItems: "center",
-    justifyContent: "center",
+    justify: "center",
     gap: 16,
   },
   loaderText: {
@@ -444,25 +395,19 @@ const styles = StyleSheet.create((theme) => ({
     fontWeight: "900",
     letterSpacing: 1,
   },
-  // ─── Sticky floating back button ───────────────────────────────────────────
   floatingBack: {
     position: "absolute",
     top: 16,
     left: 16,
     zIndex: 100,
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     backgroundColor: "#111111",
-    borderWidth: 1.5,
-    borderColor: "#333333",
+    borderWidth: 1,
+    borderColor: "#222222",
     alignItems: "center",
-    justifyContent: "center",
-    shadowColor: "#000000",
-    shadowOpacity: 0.6,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 8,
+    justify: "center",
   },
   gridContent: {
     paddingBottom: theme.spacing["4xl"],
@@ -505,7 +450,7 @@ const styles = StyleSheet.create((theme) => ({
   thumbPlaceholder: {
     flex: 1,
     alignItems: "center",
-    justifyContent: "center",
+    justify: "center",
   },
   thumbEmoji: {
     fontSize: 48,
@@ -632,120 +577,34 @@ const styles = StyleSheet.create((theme) => ({
     backgroundColor: "#000000",
     marginVertical: 0,
   },
-
-  // ─── Redesigned Action Buttons ──────────────────────────────────────────────
   actions: {
     flexDirection: "row",
-    paddingHorizontal: theme.spacing.lg,
-    gap: 12,
-    alignItems: "stretch",
-  },
-  // SAVE button — YEL accent, prominent
-  saveBtn: {
-    flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 10,
-    paddingVertical: 18,
-    minHeight: 56,
-    backgroundColor: "#111111",
-    borderWidth: 3,
-    borderColor: "#FFF500",
-    borderRadius: 0,
-    position: "relative",
-  },
-  saveBtnActive: {
-    backgroundColor: "#FFF500",
-    borderColor: "#FFF500",
-  },
-  btnShadow: {
-    position: "absolute",
-    top: 4,
-    left: 4,
-    right: -4,
-    bottom: -4,
-    backgroundColor: "#000000",
-    zIndex: -1,
-  },
-  saveBtnLabel: {
-    color: "#FFF500",
-    fontSize: 14,
-    fontWeight: "900",
-    letterSpacing: 1,
-  },
-  saveBtnLabelActive: {
-    color: "#000000",
-  },
-  // GET button — white fill, max contrast
-  getBtn: {
-    flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 10,
-    paddingVertical: 18,
-    minHeight: 56,
-    backgroundColor: "#FFFFFF",
-    borderWidth: 3,
-    borderColor: "#000000",
-    borderRadius: 0,
-    position: "relative",
-  },
-  getBtnShadow: {
-    position: "absolute",
-    top: 4,
-    left: 4,
-    right: -4,
-    bottom: -4,
-    backgroundColor: "#000000",
-    zIndex: -1,
-  },
-  getBtnLabel: {
-    color: "#000000",
-    fontSize: 14,
-    fontWeight: "900",
-    letterSpacing: 1,
-  },
-  // WhatsApp button — green, square icon-only
-  waBtn: {
-    width: 56,
-    height: 56,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: "#25D366",
-    borderWidth: 3,
-    borderColor: "#000000",
-    borderRadius: 0,
-    position: "relative",
-  },
-  waBtnShadow: {
-    position: "absolute",
-    top: 4,
-    left: 4,
-    right: -4,
-    bottom: -4,
-    backgroundColor: "#000000",
-    zIndex: -1,
-  },
-  waBtnSuccess: {
-    backgroundColor: "#22c55e",
-  },
-
-  tickerContainer: {
-    backgroundColor: "#FFF500",
-    paddingVertical: 6,
-    overflow: "hidden",
     marginHorizontal: theme.spacing.lg,
+    backgroundColor: "#111111",
+    borderWidth: 1,
+    borderColor: "#222222",
+    borderRadius: 4,
+    alignItems: "center",
+    paddingVertical: 4,
   },
-  tickerContent: {
+  actionBtn: {
+    flex: 1,
     flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    height: 40,
   },
-  tickerText: {
-    color: "#000000",
+  actionBtnLabel: {
+    color: "#FFFFFF",
     fontSize: 11,
-    fontWeight: "900",
+    fontWeight: "700",
     letterSpacing: 0.5,
+  },
+  actionDivider: {
+    width: 1,
+    height: 16,
+    backgroundColor: "#222222",
   },
   tagsWrap: {
     flexDirection: "row",
@@ -808,7 +667,7 @@ const styles = StyleSheet.create((theme) => ({
     borderColor: "#000000",
     padding: 8,
     alignItems: "center",
-    justifyContent: "center",
+    justify: "center",
     position: "relative",
   },
   stickerImg: {

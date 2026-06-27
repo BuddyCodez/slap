@@ -10,6 +10,7 @@ import {
 } from "react-native";
 import { DotMatrixLoader } from "@/components/ui/DotMatrixLoader";
 import * as ImagePicker from "expo-image-picker";
+import * as FileSystem from "expo-file-system/legacy";
 import {
   Plus,
   Upload,
@@ -107,20 +108,31 @@ export function CreatePackForm({
       formData.append("category", category || "");
       formData.append("tags", JSON.stringify(tags));
 
-      // Fetch files from URIs and add to FormData
+      // Add sticker files to FormData as base64 strings
+      // React Native FormData doesn't support Blob/File objects
       for (const asset of selectedImages) {
         const filename =
           asset.fileName ||
           `sticker_${Date.now()}_${Math.floor(Math.random() * 1000)}.png`;
 
-        const fileResponse = await fetch(asset.uri);
-        const blob = await fileResponse.blob();
-        formData.append("stickers", blob, filename);
+        // Read file as base64
+        const base64 = await FileSystem.readAsStringAsync(asset.uri, {
+          encoding: FileSystem.EncodingType.Base64,
+        });
+
+        // Append as JSON object with base64 data and metadata
+        const fileData = JSON.stringify({
+          data: base64,
+          name: filename,
+          type: asset.type || "image/png",
+        });
+
+        formData.append("stickers", fileData);
       }
 
       const apiUrl =
         process.env.EXPO_PUBLIC_SERVER_URL || "http://192.168.1.14:3000";
-      const response = await fetch(`${apiUrl}/api/packs/create-formdata`, {
+      const uploadResponse = await fetch(`${apiUrl}/api/packs/create-formdata`, {
         method: "POST",
         headers: {
           ...(authClient.getCookie() ? { Cookie: authClient.getCookie() } : {}),
@@ -128,8 +140,8 @@ export function CreatePackForm({
         body: formData,
       });
 
-      const result = await response.json();
-      if (!response.ok) {
+      const result = await uploadResponse.json();
+      if (!uploadResponse.ok) {
         throw new Error(result.error || "Failed to create pack");
       }
 
