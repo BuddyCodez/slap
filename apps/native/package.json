@@ -52,7 +52,6 @@
 		"react-native-unistyles": "^3.2.4",
 		"react-native-wa-stickers-animated": "^2.0.18",
 		"react-native-web": "~0.21.0",
-		"react-native-whatsapp-stickers": "^2.0.3",
 		"react-native-worklets": "0.8.3",
 		"zod": "catalog:"
 	},
