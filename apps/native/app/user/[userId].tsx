@@ -162,9 +162,16 @@ export default function CreatorProfileScreen() {
 
 					{/* Avatar */}
 					<View style={styles.avatarSection}>
-						<View style={styles.avatarFallback}>
-							<Text style={styles.avatarText}>{userInitial}</Text>
-						</View>
+						{profile?.image ? (
+							<Image
+								source={{ uri: profile.image }}
+								style={styles.avatarImage}
+							/>
+						) : (
+							<View style={styles.avatarFallback}>
+								<Text style={styles.avatarText}>{userInitial}</Text>
+							</View>
+						)}
 					</View>
 
 					{/* User info */}
@@ -269,6 +276,18 @@ const styles = StyleSheet.create((theme) => ({
 	// Avatar
 	avatarSection: {
 		marginBottom: theme.spacing.sm,
+	},
+	avatarImage: {
+		width: 104,
+		height: 104,
+		borderRadius: 0,
+		borderWidth: 2,
+		borderColor: "#FFF500",
+		shadowColor: "#FFF500",
+		shadowOffset: { width: 0, height: 0 },
+		shadowOpacity: 0.3,
+		shadowRadius: 8,
+		elevation: 4,
 	},
 	avatarFallback: {
 		width: 104,
