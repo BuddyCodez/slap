@@ -30,6 +30,7 @@ import { ButtonSkeleton } from "@/components/ui/button-skeleton";
 
 import { authClient } from "@/lib/auth-client";
 import { formatCount } from "@/utils/format";
+import { env } from "@slap/env/native";
 import { queryClient as globalQueryClient, orpc } from "@/utils/orpc";
 
 const { height: SCREEN_H } = Dimensions.get("window");
@@ -387,13 +388,10 @@ export default function ProfileScreen() {
 			);
 
 			const response = await fetch(
-				`${orpc.getBaseURL()}/api/profile/upload-photo`,
+				`${env.EXPO_PUBLIC_SERVER_URL}/api/profile/upload-photo`,
 				{
 					method: "POST",
 					body: formData,
-					headers: {
-						Accept: "application/json",
-					},
 					credentials: "include",
 				},
 			);
