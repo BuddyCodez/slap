@@ -439,7 +439,7 @@ const styles = StyleSheet.create((theme) => ({
     zIndex: -1,
   },
   thumbWrap: {
-    height: 180,
+    height: 340,
     backgroundColor: "#0D0D0D",
     position: "relative",
   },
