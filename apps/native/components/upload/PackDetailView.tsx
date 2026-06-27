@@ -1,5 +1,4 @@
 import {
-	ActivityIndicator,
 	Alert,
 	Image,
 	ScrollView,
@@ -14,14 +13,24 @@ import {
 	ChevronLeft,
 } from "lucide-react-native";
 import { StyleSheet } from "react-native-unistyles";
+import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import Animated, {
+	useSharedValue,
+	useAnimatedStyle,
+	withSequence,
+	withSpring,
+} from "react-native-reanimated";
+import { Pressable } from "react-native";
 
+import { DotMatrixLoader } from "@/components/ui/DotMatrixLoader";
+import { authClient } from "@/lib/auth-client";
 import { orpc } from "@/utils/orpc";
 
-// Bypass incorrect web-type resolution of Lucide icons on React Native
 const PlusIcon = Plus as any;
 const TrashIcon = Trash2 as any;
-const ChevronLeftIcon = ChevronLeft as any;
+
+const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
 interface PackDetailViewProps {
 	packId: string;
@@ -31,6 +40,8 @@ interface PackDetailViewProps {
 
 export function PackDetailView({ packId, onBack, onDeleteSuccess }: PackDetailViewProps) {
 	const queryClient = useQueryClient();
+	const [isUploading, setIsUploading] = useState(false);
+	const backScale = useSharedValue(1);
 
 	const { data: activePackDetails, isLoading: isLoadingDetails, refetch: refetchDetails } =
 		useQuery(
@@ -54,48 +65,18 @@ export function PackDetailView({ packId, onBack, onDeleteSuccess }: PackDetailVi
 		})
 	);
 
-	const addStickerMutation = useMutation(
-		orpc.stickers.upload.mutationOptions({
-			onSuccess: () => {
-				Alert.alert("UPLOADED", "Sticker uploaded and is now processing ⚡");
-				refetchDetails();
-				queryClient.invalidateQueries({ queryKey: orpc.packs.myPacks.key() });
-				queryClient.invalidateQueries({ queryKey: orpc.packs.list.key() });
-				queryClient.invalidateQueries({ queryKey: orpc.packs.trending.key() });
-			},
-			onError: (err: any) => {
-				Alert.alert("ERROR", err.message || "Failed to upload sticker.");
-			},
-		})
-	);
-
 	const deleteStickerMutation = useMutation(
 		orpc.stickers.delete.mutationOptions({
 			onSuccess: () => {
 				Alert.alert("DELETED", "Sticker deleted.");
 				refetchDetails();
 				queryClient.invalidateQueries({ queryKey: orpc.packs.myPacks.key() });
-				queryClient.invalidateQueries({ queryKey: orpc.packs.list.key() });
-				queryClient.invalidateQueries({ queryKey: orpc.packs.trending.key() });
 			},
 			onError: (err: any) => {
 				Alert.alert("ERROR", err.message || "Failed to delete sticker.");
 			},
 		})
 	);
-
-	const fileFromAsset = async (asset: ImagePicker.ImagePickerAsset): Promise<File> => {
-		const filename = asset.fileName || `sticker_${Date.now()}_${Math.floor(Math.random() * 1000)}.png`;
-		const mimeType = asset.mimeType || "image/png";
-
-		// For React Native: read as binary via fetch and create Uint8Array
-		const response = await fetch(asset.uri);
-		const arrayBuffer = await response.arrayBuffer();
-		const bytes = new Uint8Array(arrayBuffer);
-
-		// Create File from Uint8Array - this works on React Native
-		return new File([bytes], filename, { type: mimeType });
-	};
 
 	const handleAddSingleSticker = async () => {
 		const result = await ImagePicker.launchImageLibraryAsync({
@@ -104,32 +85,73 @@ export function PackDetailView({ packId, onBack, onDeleteSuccess }: PackDetailVi
 			quality: 0.8,
 		});
 
-		if (!result.canceled && result.assets[0]) {
-			try {
-				const file = await fileFromAsset(result.assets[0]);
-				addStickerMutation.mutate({
-					packId,
-					file,
-				});
-			} catch (e) {
-				Alert.alert("ERROR", "Failed to upload sticker file.");
+		if (result.canceled || !result.assets[0]) return;
+
+		setIsUploading(true);
+		try {
+			const asset = result.assets[0];
+			const formData = new FormData();
+			formData.append("packId", packId);
+
+			// Fetch the file from the URI and convert to blob
+			const fileResponse = await fetch(asset.uri);
+			const blob = await fileResponse.blob();
+			const filename = asset.fileName || `sticker_${Date.now()}.png`;
+			formData.append("sticker", blob, filename);
+
+			const apiUrl = process.env.EXPO_PUBLIC_API_URL || "http://localhost:3000";
+			const response = await fetch(`${apiUrl}/api/stickers/add-formdata`, {
+				method: "POST",
+				headers: {
+					...(authClient.getCookie() ? { Cookie: authClient.getCookie() } : {}),
+				},
+				body: formData,
+			});
+
+			const data = await response.json();
+			if (!response.ok) {
+				throw new Error(data.error || "Failed to upload sticker");
 			}
+
+			Alert.alert("UPLOADED", "Sticker added successfully!");
+			refetchDetails();
+			queryClient.invalidateQueries({ queryKey: orpc.packs.myPacks.key() });
+		} catch (e) {
+			const msg = e instanceof Error ? e.message : "Failed to upload sticker";
+			Alert.alert("ERROR", msg);
+		} finally {
+			setIsUploading(false);
 		}
 	};
 
+	const handleBack = () => {
+		backScale.value = withSequence(
+			withSpring(0.88, { damping: 10, stiffness: 400 }),
+			withSpring(1, { damping: 8, stiffness: 280 }),
+		);
+		onBack();
+	};
+
+	const backAnimStyle = useAnimatedStyle(() => ({
+		transform: [{ scale: backScale.value }],
+	}));
+
 	return (
 		<View style={styles.container}>
-			<TouchableOpacity style={styles.backButton} onPress={onBack}>
-				<ChevronLeftIcon size={16} color="#FFF500" />
-				<Text style={styles.backButtonText}>BACK TO MY UPLOADS</Text>
-			</TouchableOpacity>
+			{/* Sticky ISO-style floating back button */}
+			<AnimatedPressable style={[styles.floatingBack, backAnimStyle]} onPress={handleBack}>
+				<ChevronLeft size={18} color="#FFF500" />
+			</AnimatedPressable>
 
 			{isLoadingDetails ? (
 				<View style={styles.loadingContainer}>
-					<ActivityIndicator size="large" color="#FFF500" />
+					<DotMatrixLoader size={48} />
 				</View>
 			) : activePackDetails ? (
 				<ScrollView contentContainerStyle={styles.detailScroll}>
+					{/* Spacer for floating button */}
+					<View style={{ height: 56 }} />
+
 					<View style={styles.detailHeaderCard}>
 						<View style={styles.detailHeaderInfo}>
 							<Text style={styles.detailPackName}>{activePackDetails.name.toUpperCase()}</Text>
@@ -172,17 +194,16 @@ export function PackDetailView({ packId, onBack, onDeleteSuccess }: PackDetailVi
 						</TouchableOpacity>
 					</View>
 
-					{/* Stickers Grid */}
 					<View style={styles.detailStickersSection}>
 						<View style={styles.stickersSectionHeader}>
 							<Text style={styles.sectionSubTitle}>STICKERS ({activePackDetails.stickers.length})</Text>
 							<TouchableOpacity
 								style={styles.addStickerActionBtn}
 								onPress={handleAddSingleSticker}
-								disabled={addStickerMutation.isPending}
+								disabled={isUploading}
 							>
-								{addStickerMutation.isPending ? (
-									<ActivityIndicator size="small" color="#000000" />
+								{isUploading ? (
+									<DotMatrixLoader color="#000000" size={16} />
 								) : (
 									<>
 										<PlusIcon size={14} color="#000000" />
@@ -199,7 +220,7 @@ export function PackDetailView({ packId, onBack, onDeleteSuccess }: PackDetailVi
 										<Image source={{ uri: sticker.url }} style={styles.stickerImage} />
 									) : (
 										<View style={styles.stickerProcessingPlaceholder}>
-											<ActivityIndicator size="small" color="#FFF500" />
+											<DotMatrixLoader size={20} />
 											<Text style={styles.stickerProcessingText}>COOKING</Text>
 										</View>
 									)}
@@ -239,17 +260,25 @@ const styles = StyleSheet.create((theme) => ({
 	container: {
 		flex: 1,
 	},
-	backButton: {
-		flexDirection: "row",
+	// ─── Sticky ISO-style floating back ──────────────────────────────────────────
+	floatingBack: {
+		position: "absolute",
+		top: 12,
+		left: 8,
+		zIndex: 100,
+		width: 40,
+		height: 40,
+		borderRadius: 20,
+		backgroundColor: "#111111",
+		borderWidth: 1.5,
+		borderColor: "#333333",
 		alignItems: "center",
-		gap: 6,
-		marginBottom: 16,
-	},
-	backButtonText: {
-		color: "#FFF500",
-		fontWeight: "900",
-		fontSize: 11,
-		letterSpacing: 0.5,
+		justifyContent: "center",
+		shadowColor: "#000000",
+		shadowOpacity: 0.6,
+		shadowRadius: 8,
+		shadowOffset: { width: 0, height: 4 },
+		elevation: 8,
 	},
 	loadingContainer: {
 		flex: 1,
@@ -271,7 +300,7 @@ const styles = StyleSheet.create((theme) => ({
 		backgroundColor: "#1A1A1A",
 		borderWidth: 3,
 		borderColor: "#000000",
-		borderRadius: 4,
+		borderRadius: 0,
 		padding: 16,
 		flexDirection: "row",
 		justifyContent: "space-between",
@@ -295,7 +324,7 @@ const styles = StyleSheet.create((theme) => ({
 	statusBadge: {
 		borderWidth: 1.5,
 		borderColor: "#000000",
-		borderRadius: 3,
+		borderRadius: 0,
 		paddingHorizontal: 8,
 		paddingVertical: 3,
 	},
@@ -326,7 +355,7 @@ const styles = StyleSheet.create((theme) => ({
 		backgroundColor: "#ff3b30",
 		borderWidth: 2,
 		borderColor: "#000000",
-		borderRadius: 4,
+		borderRadius: 0,
 		width: 36,
 		height: 36,
 		alignItems: "center",
@@ -341,7 +370,7 @@ const styles = StyleSheet.create((theme) => ({
 		backgroundColor: "#1A1A1A",
 		borderWidth: 2,
 		borderColor: "#000000",
-		borderRadius: 4,
+		borderRadius: 0,
 		padding: 16,
 		gap: 12,
 	},
@@ -360,7 +389,7 @@ const styles = StyleSheet.create((theme) => ({
 		backgroundColor: "#FFF500",
 		borderWidth: 1.5,
 		borderColor: "#000000",
-		borderRadius: 3,
+		borderRadius: 0,
 		paddingHorizontal: 8,
 		paddingVertical: 4,
 		flexDirection: "row",
@@ -384,14 +413,14 @@ const styles = StyleSheet.create((theme) => ({
 		backgroundColor: "#262626",
 		borderWidth: 2,
 		borderColor: "#000000",
-		borderRadius: 4,
+		borderRadius: 0,
 		alignItems: "center",
 		justifyContent: "center",
 	},
 	stickerImage: {
 		width: "100%",
 		height: "100%",
-		borderRadius: 2,
+		borderRadius: 0,
 	},
 	stickerProcessingPlaceholder: {
 		alignItems: "center",
@@ -410,7 +439,7 @@ const styles = StyleSheet.create((theme) => ({
 		backgroundColor: "#000000",
 		borderWidth: 1,
 		borderColor: "#ff3b30",
-		borderRadius: 3,
+		borderRadius: 0,
 		width: 18,
 		height: 18,
 		alignItems: "center",

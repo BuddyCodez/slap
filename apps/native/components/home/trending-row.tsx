@@ -1,37 +1,60 @@
-import { ScrollView, Text, View } from "react-native";
+import { Image, Pressable, ScrollView, Text, View } from "react-native";
 import { StyleSheet } from "react-native-unistyles";
 
-import { TrendingPackCard } from "@/components/ui/trending-pack-card";
+const ROTATIONS = ["-2.5deg", "3deg", "-1.5deg", "2deg", "4deg", "-3deg", "1.5deg"];
+const BADGES = ["🔥 HOT", "💥 NEW DROP", "⭐ FIRE", "💎 RARE", "🔥 HOT"];
 
-type TrendingRowProps = {
-	packs: any[];
-	title?: string;
+type Pack = {
+	id: string;
+	name: string;
+	creator?: { name: string };
+	thumbnail?: string;
+	downloads: number;
+	saves: number;
 };
 
-export function TrendingRow({
-	packs,
-	title = "Trending Packs",
-}: TrendingRowProps) {
+type TrendingRowProps = {
+	packs: Pack[];
+	onPackPress?: (id: string) => void;
+};
+
+export function TrendingRow({ packs, onPackPress }: TrendingRowProps) {
 	if (packs.length === 0) return null;
 
 	return (
-		<View style={styles.wrap}>
-			{/* Section header */}
-			<View style={styles.header}>
-				<Text style={styles.title}>{title}</Text>
-				<Text style={styles.seeAll}>SEE ALL</Text>
-			</View>
-
+		<View style={styles.section}>
+			<Text style={styles.title}>🔥 HOT DROPS</Text>
 			<ScrollView
 				horizontal
 				showsHorizontalScrollIndicator={false}
-				contentContainerStyle={styles.row}
-				decelerationRate="fast"
-				snapToInterval={140 + 12} // card width (140) + gap (12)
-				snapToAlignment="start"
+				contentContainerStyle={styles.scroll}
 			>
-				{packs.map((pack) => (
-					<TrendingPackCard key={pack.id} pack={pack} />
+				{packs.map((pack, i) => (
+					<Pressable
+						key={pack.id}
+						onPress={() => onPackPress?.(pack.id)}
+						style={({ pressed }) => [{ opacity: pressed ? 0.85 : 1 }]}
+					>
+						<View style={[styles.cardWrap, { transform: [{ rotate: ROTATIONS[i % ROTATIONS.length] }] }]}>
+							<View style={styles.cardShadow} />
+							<View style={styles.card}>
+								{pack.thumbnail ? (
+									<Image source={{ uri: pack.thumbnail }} style={styles.cardThumb} resizeMode="cover" />
+								) : (
+									<View style={styles.cardThumbPlaceholder}>
+										<Text style={styles.cardEmoji}>📦</Text>
+									</View>
+								)}
+								<View style={styles.cardInfo}>
+									<Text style={styles.cardName} numberOfLines={1}>{pack.name.toUpperCase()}</Text>
+									<Text style={styles.cardCreator}>@{(pack.creator?.name || "unknown").toUpperCase()}</Text>
+								</View>
+								<View style={styles.badge}>
+									<Text style={styles.badgeText}>{BADGES[i % BADGES.length]}</Text>
+								</View>
+							</View>
+						</View>
+					</Pressable>
 				))}
 			</ScrollView>
 		</View>
@@ -39,33 +62,91 @@ export function TrendingRow({
 }
 
 const styles = StyleSheet.create((theme) => ({
-	wrap: {
-		marginBottom: theme.spacing.xl,
+	section: {
+		paddingTop: theme.spacing.md,
+		paddingBottom: theme.spacing.lg,
 	},
-	header: {
-		flexDirection: "row",
-		alignItems: "center",
-		justifyContent: "space-between",
+	title: {
+		color: "#FFF500",
+		fontSize: 16,
+		fontWeight: "900",
+		letterSpacing: 1,
 		paddingHorizontal: theme.spacing.lg,
 		marginBottom: theme.spacing.md,
 	},
-	title: {
-		color: theme.colors.foreground,
-		fontSize: theme.fontSize.lg,
-		fontWeight: "900", // Heavy block font weight
+	scroll: {
+		paddingHorizontal: theme.spacing.lg,
+		gap: 16,
+		paddingBottom: 8,
+	},
+	cardWrap: {
+		width: 160,
+		height: 200,
+		position: "relative",
+	},
+	cardShadow: {
+		position: "absolute",
+		top: 0,
+		left: 0,
+		right: 0,
+		bottom: 0,
+		backgroundColor: "#FFF500",
+		borderRadius: 0,
+		transform: [{ translateX: 4 }, { translateY: 4 }],
+	},
+	card: {
+		flex: 1,
+		backgroundColor: "#1A1A1A",
+		borderWidth: 3,
+		borderColor: "#000000",
+		borderRadius: 0,
+		overflow: "hidden",
+	},
+	cardThumb: {
+		width: "100%",
+		height: 110,
+	},
+	cardThumbPlaceholder: {
+		width: "100%",
+		height: 110,
+		backgroundColor: "#0D0D0D",
+		alignItems: "center",
+		justifyContent: "center",
+	},
+	cardEmoji: {
+		fontSize: 36,
+	},
+	cardInfo: {
+		padding: 10,
+		gap: 2,
+	},
+	cardName: {
+		color: "#FFFFFF",
+		fontSize: 13,
+		fontWeight: "900",
 		letterSpacing: -0.3,
 	},
-	seeAll: {
-		color: "#FFF500", // Cyber-Yellow see-all trigger
-		fontSize: theme.fontSize.xs + 1,
+	cardCreator: {
+		color: "#707070",
+		fontSize: 9,
 		fontWeight: "900",
 		letterSpacing: 0.5,
 	},
-	row: {
-		paddingHorizontal: theme.spacing.lg,
-		gap: 12,
-		paddingBottom: 8, // padding for the card shadow offset
+	badge: {
+		position: "absolute",
+		top: 8,
+		right: 8,
+		backgroundColor: "#FFF500",
+		borderWidth: 2,
+		borderColor: "#000000",
+		borderRadius: 0,
+		paddingHorizontal: 8,
+		paddingVertical: 3,
+	},
+	badgeText: {
+		color: "#000000",
+		fontSize: 9,
+		fontWeight: "900",
+		letterSpacing: 0.5,
 	},
 }));
-
-export type { TrendingRowProps };

@@ -17,6 +17,7 @@ export default function UploadScreen() {
 	const [activeTab, setActiveTab] = useState<"create" | "my-packs">("create");
 	const [selectedPackId, setSelectedPackId] = useState<string | null>(null);
 	const [tags, setTags] = useState<string[]>([]);
+	const [tagsSheetVisible, setTagsSheetVisible] = useState(false);
 
 	return (
 		<View style={styles.root}>

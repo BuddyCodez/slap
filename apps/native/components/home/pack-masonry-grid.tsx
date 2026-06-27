@@ -12,8 +12,22 @@ import { formatCount } from "@/utils/format";
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
+type Pack = {
+	id: string;
+	name: string;
+	creator?: { name: string };
+	thumbnail?: string;
+	downloads: number;
+	saves: number;
+	tags?: string[];
+	stickers?: Array<{ url: string }>;
+	category?: string;
+	savedByUser?: boolean;
+	emoji?: string;
+};
+
 type PackRowProps = {
-	pack: any;
+	pack: Pack;
 	isLast?: boolean;
 	onPress?: () => void;
 };
@@ -29,8 +43,8 @@ function PackRow({ pack, isLast = false, onPress }: PackRowProps) {
 	}));
 
 	const handlePressIn = () => {
-		scale.value = withSpring(0.98, { damping: 15, stiffness: 350 });
-		opacity.value = withSpring(0.8, { damping: 15, stiffness: 350 });
+		scale.value = withSpring(0.99, { damping: 15, stiffness: 350 });
+		opacity.value = withSpring(0.9, { damping: 15, stiffness: 350 });
 	};
 
 	const handlePressOut = () => {
@@ -43,17 +57,20 @@ function PackRow({ pack, isLast = false, onPress }: PackRowProps) {
 	return (
 		<AnimatedPressable
 			onPress={() => {
-				void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+				void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Soft);
 				onPress?.();
 			}}
 			onPressIn={handlePressIn}
-			onPressOut={handlePressOut}
 			style={[styles.row, animatedStyle]}
 		>
 			{/* Left Preview Image/Emoji Badge */}
 			<View style={styles.emojiContainer}>
 				{imageUrl ? (
-					<Image source={{ uri: imageUrl }} style={styles.rowImage} resizeMode="contain" />
+					<Image
+						source={{ uri: imageUrl }}
+						style={styles.rowImage}
+						resizeMode="contain"
+					/>
 				) : (
 					<Text style={styles.rowEmoji}>{pack.emoji || "⚡"}</Text>
 				)}
@@ -73,15 +90,16 @@ function PackRow({ pack, isLast = false, onPress }: PackRowProps) {
 						color={theme.colors.muted}
 					/>
 					<Text style={styles.rowStats}>{formatCount(pack.downloads)}</Text>
+					<Text style={styles.dotSeparator}>•</Text>
+					<Ionicons
+						name="heart-outline"
+						size={12}
+						color={theme.colors.muted}
+					/>
+					<Text style={styles.rowStats}>{formatCount(pack.saves)}</Text>
 				</View>
 			</View>
 
-			{/* Right Action Trigger */}
-			<View style={styles.actionContainer}>
-				<View style={styles.getButton}>
-					<Text style={styles.getButtonText}>GET</Text>
-				</View>
-			</View>
 
 			{/* Apple-style thin divider line */}
 			{!isLast && <View style={styles.divider} />}
@@ -90,15 +108,19 @@ function PackRow({ pack, isLast = false, onPress }: PackRowProps) {
 }
 
 type PackMasonryGridProps = {
-	packs: any[];
+	packs: Pack[];
 	title?: string;
+	onPackPress?: (packId: string) => void;
+	hideSeparator?: boolean;
 };
 
 export function PackMasonryGrid({
 	packs,
 	title = "All Packs",
+	onPackPress,
+	hideSeparator = false,
 }: PackMasonryGridProps) {
-	if (packs.length === 0) {
+	if (packs.length === 0 && !hideSeparator) {
 		return (
 			<View style={styles.emptyState}>
 				<Ionicons
@@ -113,6 +135,18 @@ export function PackMasonryGrid({
 				</Text>
 			</View>
 		);
+	}
+
+	if (hideSeparator) {
+		return packs.map((pack, index) => (
+			<View key={pack.id} style={styles.singleRow}>
+				<PackRow
+					pack={pack}
+					isLast={index === packs.length - 1}
+					onPress={() => onPackPress?.(pack.id)}
+				/>
+			</View>
+		));
 	}
 
 	return (
@@ -130,6 +164,7 @@ export function PackMasonryGrid({
 						key={pack.id}
 						pack={pack}
 						isLast={index === packs.length - 1}
+						onPress={() => onPackPress?.(pack.id)}
 					/>
 				))}
 			</View>
@@ -141,6 +176,10 @@ const styles = StyleSheet.create((theme) => ({
 	wrap: {
 		paddingHorizontal: theme.spacing.lg,
 		paddingBottom: theme.spacing["4xl"],
+	},
+	singleRow: {
+		paddingHorizontal: theme.spacing.lg,
+		paddingVertical: theme.spacing.sm,
 	},
 	header: {
 		flexDirection: "row",
@@ -160,8 +199,8 @@ const styles = StyleSheet.create((theme) => ({
 		fontWeight: theme.fontWeight.bold,
 	},
 	listContainer: {
-		backgroundColor: "#1A1A1A", // Dark Brutalist surface
-		borderRadius: 4, // Sharp corners
+		backgroundColor: "#1A1A1A",
+		borderRadius: 0,
 		borderWidth: 2,
 		borderColor: "#000000",
 		overflow: "hidden",
@@ -181,7 +220,7 @@ const styles = StyleSheet.create((theme) => ({
 	emojiContainer: {
 		width: 44,
 		height: 44,
-		borderRadius: 2,
+		borderRadius: 0,
 		borderWidth: 1.5,
 		borderColor: "#000000",
 		backgroundColor: "#000000",
@@ -205,7 +244,7 @@ const styles = StyleSheet.create((theme) => ({
 	rowName: {
 		color: "#FFFFFF",
 		fontSize: theme.fontSize.base - 1,
-		fontWeight: "900", // Heavy block font weight
+		fontWeight: "900",
 		letterSpacing: -0.15,
 	},
 	metaRow: {
@@ -214,7 +253,7 @@ const styles = StyleSheet.create((theme) => ({
 		marginTop: 2,
 	},
 	rowCreator: {
-		color: "#FFF500", // Cyber-Yellow accent
+		color: "#FFF500",
 		fontSize: theme.fontSize.xs,
 		fontWeight: "700",
 	},
@@ -231,25 +270,27 @@ const styles = StyleSheet.create((theme) => ({
 	actionContainer: {
 		justifyContent: "center",
 	},
-	getButton: {
-		backgroundColor: "#FFF500", // Cyber-Yellow button
-		borderRadius: 4, // Sharp corners
-		borderWidth: 2,
-		borderColor: "#000000",
-		paddingHorizontal: theme.spacing.md,
-		paddingVertical: 5,
-		minWidth: 54,
+	statsCard: {
+		backgroundColor: "#1A1A1A",
+		borderRadius: 0,
+		borderWidth: 1.5,
+		borderColor: "#FFF500",
+		paddingHorizontal: theme.spacing.sm,
+		paddingVertical: 4,
+		minWidth: 62,
 		alignItems: "center",
-		shadowColor: "#000000",
-		shadowOpacity: 1,
-		shadowRadius: 0,
-		shadowOffset: { width: 2, height: 2 },
+		gap: 2,
 	},
-	getButtonText: {
-		color: "#000000",
-		fontSize: 11,
-		fontWeight: "900", // Extra heavy font weight
+	statsCardLabel: {
+		color: "#FFF500",
+		fontSize: 9,
+		fontWeight: "900",
 		letterSpacing: 0.2,
+	},
+	statsCardValue: {
+		color: "#FFFFFF",
+		fontSize: 10,
+		fontWeight: "700",
 	},
 	divider: {
 		position: "absolute",
@@ -257,7 +298,7 @@ const styles = StyleSheet.create((theme) => ({
 		left: 44 + 16 + 16,
 		right: 0,
 		height: 2,
-		backgroundColor: "#000000", // Strong black divider line
+		backgroundColor: "#000000",
 	},
 	emptyState: {
 		alignItems: "center",

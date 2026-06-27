@@ -56,10 +56,6 @@ export async function deleteObject(key: string) {
 	}
 }
 
-export function tempStickerKey(packId: string, stickerId: string) {
-	return `temp/packs/${packId}/${stickerId}/original`;
-}
-
 export function finalStickerKey(packId: string, stickerId: string) {
 	return `packs/${packId}/stickers/${stickerId}.webp`;
 }

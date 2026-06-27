@@ -5,12 +5,14 @@ import {
 	View,
 	type ViewStyle,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { StyleSheet } from "react-native-unistyles";
 
 type ScreenProps = PropsWithChildren<{
 	scrollable?: boolean;
 	contentContainerStyle?: ViewStyle;
 	scrollProps?: Omit<ScrollViewProps, "contentContainerStyle" | "children">;
+	safeAreaEdges?: ("top" | "bottom" | "left" | "right")[];
 }>;
 
 export function Screen({
@@ -18,21 +20,26 @@ export function Screen({
 	scrollable = true,
 	contentContainerStyle,
 	scrollProps,
+	safeAreaEdges = ["top"],
 }: ScreenProps) {
 	if (!scrollable) {
-		return <View style={styles.root}>{children}</View>;
+		return (
+			<SafeAreaView style={styles.root} edges={safeAreaEdges}>
+				{children}
+			</SafeAreaView>
+		);
 	}
 
 	return (
-		<ScrollView
-			style={styles.root}
-			contentContainerStyle={[styles.content, contentContainerStyle]}
-			contentInsetAdjustmentBehavior="automatic"
-			showsVerticalScrollIndicator={false}
-			{...scrollProps}
-		>
-			{children}
-		</ScrollView>
+		<SafeAreaView style={styles.root} edges={safeAreaEdges}>
+			<ScrollView
+				contentContainerStyle={[styles.content, contentContainerStyle]}
+				showsVerticalScrollIndicator={false}
+				{...scrollProps}
+			>
+				{children}
+			</ScrollView>
+		</SafeAreaView>
 	);
 }
 

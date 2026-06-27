@@ -1,121 +1,82 @@
 import prisma from "@slap/db";
 import { PackStatus, StickerStatus } from "@slap/db/prisma/generated/enums";
 import { type Job, Worker } from "bullmq";
-import sharp from "sharp";
 
+import { generateThumbnail } from "../lib/image-processing";
 import type { ImageProcessJob } from "../lib/queues";
 import { redisConnection } from "../lib/redis";
 import {
-	finalStickerKey,
 	getObjectBuffer,
 	thumbnailKey,
 	toPublicUrl,
 	uploadObject,
 } from "../lib/storage";
 
-const maxDimension = 512;
-const maxSizeBytes = 512 * 1024;
+async function finalizePack(job: Job<ImageProcessJob>) {
+	const { packId, stickers } = job.data;
 
-async function processSticker(
-	input: ImageProcessJob["stickers"][number] & {
-		packId: string;
-	},
-) {
-	const original = await getObjectBuffer(input.tempKey);
-	const image = sharp(original, { failOn: "warning" }).rotate();
-	const metadata = await image.metadata();
+	// Update each sticker independently — one failure doesn't block others
+	const results = await Promise.allSettled(
+		stickers.map((s) =>
+			prisma.sticker.update({
+				where: { id: s.stickerId },
+				data: {
+					url: s.url,
+					r2Key: s.r2Key,
+					width: s.width,
+					height: s.height,
+					sizeBytes: s.sizeBytes,
+					status: StickerStatus.READY,
+				},
+			}),
+		),
+	);
 
-	if (
-		!metadata.width ||
-		!metadata.height ||
-		metadata.width > maxDimension ||
-		metadata.height > maxDimension
-	) {
-		throw new Error(
-			`Sticker ${input.stickerId} exceeds ${maxDimension}x${maxDimension}`,
+	const failed = results.filter((r) => r.status === "rejected");
+	if (failed.length > 0) {
+		console.error(
+			`[image-process] ${failed.length}/${stickers.length} sticker DB updates failed for pack ${packId}`,
+			failed.map((r) => (r as PromiseRejectedResult).reason),
 		);
 	}
 
-	const webp = await image.webp({ quality: 90 }).toBuffer();
+	// Generate thumbnail from first sticker
+	let thumbnail: string | undefined;
+	const firstSticker = stickers.toSorted((a, b) => a.order - b.order)[0];
 
-	if (webp.byteLength > maxSizeBytes) {
-		throw new Error(
-			`Sticker ${input.stickerId} exceeds 512KB after conversion`,
-		);
+	if (firstSticker) {
+		try {
+			const webpBuffer = await getObjectBuffer(firstSticker.r2Key);
+			const thumb = await generateThumbnail(webpBuffer);
+			const key = thumbnailKey(packId);
+			await uploadObject({ key, body: thumb, contentType: "image/webp" });
+			thumbnail = toPublicUrl(key);
+		} catch (err) {
+			console.error(
+				`[image-process] thumbnail generation failed for pack ${packId}:`,
+				err,
+			);
+		}
 	}
 
-	const key = finalStickerKey(input.packId, input.stickerId);
-	const url = await uploadObject({
-		key,
-		body: webp,
-		contentType: "image/webp",
-	});
-
-	await prisma.sticker.update({
-		where: { id: input.stickerId },
+	await prisma.pack.update({
+		where: { id: packId },
 		data: {
-			url,
-			r2Key: key,
-			width: metadata.width,
-			height: metadata.height,
-			sizeBytes: webp.byteLength,
-			status: StickerStatus.READY,
+			status: PackStatus.READY,
+			thumbnail,
 		},
 	});
 
-	return { key, webp };
+	console.log(
+		`[image-process] pack ${packId} finalized — ${stickers.length - failed.length}/${stickers.length} stickers ready`,
+	);
 }
 
-async function processPack(job: Job<ImageProcessJob>) {
-	const processed: { key: string; webp: Buffer }[] = [];
-
-	try {
-		for (const sticker of job.data.stickers.toSorted(
-			(a, b) => a.order - b.order,
-		)) {
-			processed.push(
-				await processSticker({ ...sticker, packId: job.data.packId }),
-			);
-		}
-
-		const firstSticker = processed[0];
-		let thumbnail: string | undefined;
-
-		if (firstSticker) {
-			const thumb = await sharp(firstSticker.webp)
-				.resize(96, 96, { fit: "inside" })
-				.webp({ quality: 85 })
-				.toBuffer();
-			const key = thumbnailKey(job.data.packId);
-			await uploadObject({ key, body: thumb, contentType: "image/webp" });
-			thumbnail = toPublicUrl(key);
-		}
-
-		await prisma.pack.update({
-			where: { id: job.data.packId },
-			data: {
-				status: PackStatus.READY,
-				thumbnail,
-			},
-		});
-	} catch (error) {
-		await prisma.pack.update({
-			where: { id: job.data.packId },
-			data: { status: PackStatus.FAILED },
-		});
-		await prisma.sticker.updateMany({
-			where: {
-				id: { in: job.data.stickers.map((sticker) => sticker.stickerId) },
-				status: StickerStatus.PROCESSING,
-			},
-			data: { status: StickerStatus.FAILED },
-		});
-		throw error;
-	}
-}
-
-new Worker<ImageProcessJob>("image-process", processPack, {
+new Worker<ImageProcessJob>("image-process", finalizePack, {
 	connection: redisConnection,
+	concurrency: 5,
+	removeOnComplete: { count: 100 },
+	removeOnFail: { count: 500 },
 });
 
 console.log("image-process worker started");

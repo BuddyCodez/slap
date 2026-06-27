@@ -5,40 +5,47 @@ import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { StyleSheet } from "react-native-unistyles";
 
 if (typeof global.File === "undefined") {
-	class File extends Blob {
-		name: string;
-		lastModified: number;
-		constructor(parts: any[], filename: string, options?: any) {
-			super(parts, options);
-			this.name = filename;
-			this.lastModified = options?.lastModified || Date.now();
-		}
-	}
-	global.File = File as any;
+  class File extends Blob {
+    name: string;
+    lastModified: number;
+    constructor(parts: any[], filename: string, options?: any) {
+      super(parts, options);
+      this.name = filename;
+      this.lastModified = options?.lastModified || Date.now();
+    }
+  }
+  global.File = File as any;
 }
 
 import { queryClient } from "@/utils/orpc";
 
 import "../unistyles";
+import { SafeAreaProvider } from "react-native-safe-area-context";
 
 export default function RootLayout() {
-	return (
-		<QueryClientProvider client={queryClient}>
-			<GestureHandlerRootView style={styles.root}>
-				<StatusBar hidden />
-				<Stack screenOptions={{ headerShown: false, animation: "fade" }}>
-					<Stack.Screen name="index" />
-					<Stack.Screen name="(auth)" />
-					<Stack.Screen name="(tabs)" />
-				</Stack>
-			</GestureHandlerRootView>
-		</QueryClientProvider>
-	);
+  return (
+    <QueryClientProvider client={queryClient}>
+      <GestureHandlerRootView style={styles.root}>
+        <SafeAreaProvider>
+          <StatusBar style="light" />
+          <Stack screenOptions={{ headerShown: false, animation: "fade" }}>
+            <Stack.Screen name="index" />
+            <Stack.Screen name="(auth)" />
+            <Stack.Screen name="(tabs)" />
+            <Stack.Screen
+              name="pack/[id]"
+              options={{ animation: "slide_from_right" }}
+            />
+          </Stack>
+        </SafeAreaProvider>
+      </GestureHandlerRootView>
+    </QueryClientProvider>
+  );
 }
 
 const styles = StyleSheet.create((theme) => ({
-	root: {
-		flex: 1,
-		backgroundColor: theme.colors.background,
-	},
+  root: {
+    flex: 1,
+    backgroundColor: theme.colors.background,
+  },
 }));

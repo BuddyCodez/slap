@@ -6,7 +6,11 @@ export type ImageProcessJob = {
 	packId: string;
 	stickers: {
 		stickerId: string;
-		tempKey: string;
+		r2Key: string;
+		url: string;
+		width: number;
+		height: number;
+		sizeBytes: number;
 		order: number;
 	}[];
 };

@@ -1,13 +1,14 @@
 import { cors } from "@elysiajs/cors";
 import { OpenAPIHandler } from "@orpc/openapi/fetch";
 import { OpenAPIReferencePlugin } from "@orpc/openapi/plugins";
-import { onError, ORPCError } from "@orpc/server";
+import { onError } from "@orpc/server";
 import { RPCHandler } from "@orpc/server/fetch";
 import { ZodToJsonSchemaConverter } from "@orpc/zod/zod4";
 import { createContext } from "@slap/api/context";
+import { processImageToWebp } from "@slap/api/lib/image-processing";
 import { imageProcessQueue, scheduleTrendingRecalc } from "@slap/api/lib/queues";
 import { redis } from "@slap/api/lib/redis";
-import { tempStickerKey, uploadObject } from "@slap/api/lib/storage";
+import { finalStickerKey, toPublicUrl, uploadObject } from "@slap/api/lib/storage";
 import { validateStickerUpload } from "@slap/api/lib/uploads";
 import { appRouter } from "@slap/api/routers/index";
 import "@slap/api/workers/index";
@@ -112,7 +113,8 @@ new Elysia()
 				headers: request.headers,
 			});
 
-			if (!session?.user) {
+      if (!session?.user) {
+        console.log("No sess");
 				return new Response("Unauthorized", { status: 401 });
 			}
 
@@ -124,6 +126,21 @@ new Elysia()
 			const category = (formData.get("category") as string)?.trim();
 			const tagsJson = (formData.get("tags") as string) || "[]";
 			const stickerFiles = formData.getAll("stickers") as File[];
+
+			console.log("[create-formdata] received:", {
+				name,
+				category,
+				tagsJson,
+				stickerCount: stickerFiles.length,
+				stickerDetails: stickerFiles.map((f, i) => ({
+					index: i,
+					type: typeof f,
+					isFile: f instanceof File,
+					name: f?.name,
+					size: f?.size,
+					mimeType: f?.type,
+				})),
+			});
 
 			// Validation
 			if (!name) {
@@ -215,43 +232,40 @@ new Elysia()
 					},
 				});
 
-				// Stage sticker files and collect metadata
-				const staged = await Promise.all(
+				// Process + upload each sticker inline (fail fast)
+				const processed = await Promise.all(
 					pack.stickers.map(async (sticker, index) => {
 						const file = stickerFiles[index];
 						if (!file) {
-							throw new Error("Missing sticker upload");
+							throw new Error(`Sticker #${index + 1}: missing file`);
 						}
 
-						// Validate sticker upload
 						await validateStickerUpload(file);
+						const raw = Buffer.from(await file.arrayBuffer());
+						const result = await processImageToWebp(raw, `Sticker #${index + 1}`);
 
-						// Stage file
-						const tempKey = tempStickerKey(pack.id, sticker.id);
-						await uploadObject({
-							key: tempKey,
-							body: Buffer.from(await file.arrayBuffer()),
-							contentType: file.type || "application/octet-stream",
-						});
-
-						// Update sticker with temp URL
-						await prisma.sticker.update({
-							where: { id: sticker.id },
-							data: { tempUrl: tempKey },
-						});
+						const key = finalStickerKey(pack.id, sticker.id);
+						await uploadObject({ key, body: result.webp, contentType: "image/webp" });
 
 						return {
 							stickerId: sticker.id,
-							tempKey,
+							r2Key: key,
+							url: toPublicUrl(key),
+							width: result.width,
+							height: result.height,
+							sizeBytes: result.sizeBytes,
 							order: sticker.order,
 						};
-					})
+					}),
 				);
 
-				// Queue image processing
-				await imageProcessQueue.add("process-pack", {
+				// Queue lightweight finalization (DB updates + thumbnail)
+				await imageProcessQueue.add("finalize-pack", {
 					packId: pack.id,
-					stickers: staged,
+					stickers: processed,
+				}, {
+					attempts: 3,
+					backoff: { type: "exponential", delay: 2000 },
 				});
 
 				return new Response(
@@ -277,6 +291,96 @@ new Elysia()
 		{
 			parse: "none",
 		}
+	)
+	.post(
+		"/api/stickers/add-formdata",
+		async (context) => {
+			const { request } = context;
+			const formData = await request.formData();
+
+			const session = await auth.api.getSession({ headers: request.headers });
+			if (!session?.user) {
+				return new Response(JSON.stringify({ error: "Unauthorized" }), {
+					status: 401,
+					headers: { "Content-Type": "application/json" },
+				});
+			}
+
+			const packId = (formData.get("packId") as string)?.trim();
+			const stickerFile = formData.get("sticker") as File | null;
+			const order = Number(formData.get("order") ?? -1);
+
+			if (!packId || !stickerFile) {
+				return new Response(
+					JSON.stringify({ error: "packId and sticker file are required" }),
+					{ status: 400, headers: { "Content-Type": "application/json" } },
+				);
+			}
+
+			try {
+				const pack = await prisma.pack.findUnique({
+					where: { id: packId },
+					include: { _count: { select: { stickers: true } } },
+				});
+
+				if (!pack) {
+					return new Response(
+						JSON.stringify({ error: "Pack not found" }),
+						{ status: 404, headers: { "Content-Type": "application/json" } },
+					);
+				}
+
+				if (pack.creatorId !== session.user.id) {
+					return new Response(
+						JSON.stringify({ error: "Only the creator can add stickers" }),
+						{ status: 403, headers: { "Content-Type": "application/json" } },
+					);
+				}
+
+				await validateStickerUpload(stickerFile);
+				const raw = Buffer.from(await stickerFile.arrayBuffer());
+				const result = await processImageToWebp(raw, "Sticker");
+
+				const stickerOrder = order >= 0 ? order : pack._count.stickers;
+				const sticker = await prisma.sticker.create({
+					data: { packId, order: stickerOrder },
+				});
+
+				const key = finalStickerKey(packId, sticker.id);
+				await uploadObject({ key, body: result.webp, contentType: "image/webp" });
+				const url = toPublicUrl(key);
+
+				await prisma.sticker.update({
+					where: { id: sticker.id },
+					data: {
+						url,
+						r2Key: key,
+						width: result.width,
+						height: result.height,
+						sizeBytes: result.sizeBytes,
+						status: "READY",
+					},
+				});
+
+				await prisma.pack.update({
+					where: { id: packId },
+					data: { status: "READY" },
+				});
+
+				return new Response(
+					JSON.stringify({ id: sticker.id, status: "READY", url }),
+					{ status: 200, headers: { "Content-Type": "application/json" } },
+				);
+			} catch (error) {
+				console.error("Sticker add error:", error);
+				const message = error instanceof Error ? error.message : "Failed to add sticker";
+				return new Response(JSON.stringify({ error: message }), {
+					status: 500,
+					headers: { "Content-Type": "application/json" },
+				});
+			}
+		},
+		{ parse: "none" },
 	)
 	.get("/", () => "OK")
 	.listen(3000, () => {

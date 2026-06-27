@@ -91,7 +91,7 @@ const styles = StyleSheet.create((theme) => ({
 		backgroundColor: "#1A1A1A",
 		borderWidth: 2,
 		borderColor: "#000000",
-		borderRadius: 4, // Sharp corners
+		borderRadius: 0, // Sharp corners
 		paddingHorizontal: theme.spacing.md,
 		minHeight: 46,
 		shadowColor: "#000000",

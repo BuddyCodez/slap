@@ -7,7 +7,8 @@ import { z } from "zod";
 import { protectedProcedure, publicProcedure } from "../index";
 import { imageProcessQueue } from "../lib/queues";
 import { redis } from "../lib/redis";
-import { deleteObject, tempStickerKey, uploadObject } from "../lib/storage";
+import { processImageToWebp } from "../lib/image-processing";
+import { deleteObject, finalStickerKey, toPublicUrl, uploadObject } from "../lib/storage";
 import { validateStickerUpload } from "../lib/uploads";
 
 const packInclude = {
@@ -114,7 +115,12 @@ function readyPackWhere(input?: {
 }): Prisma.PackWhereInput {
 	return {
 		status: PackStatus.READY,
-		category: input?.category,
+		category: input?.category
+			? {
+					equals: input.category,
+					mode: "insensitive",
+				}
+			: undefined,
 		tags: input?.tag
 			? {
 					some: {
@@ -167,19 +173,18 @@ async function enforceUploadRateLimit(userId: string) {
 	}
 }
 
-async function stageStickerFile(input: {
+async function processAndUploadSticker(input: {
 	packId: string;
 	stickerId: string;
 	file: File;
+	label?: string;
 }) {
 	await validateStickerUpload(input.file);
-	const key = tempStickerKey(input.packId, input.stickerId);
-	await uploadObject({
-		key,
-		body: Buffer.from(await input.file.arrayBuffer()),
-		contentType: input.file.type || "application/octet-stream",
-	});
-	return key;
+	const raw = Buffer.from(await input.file.arrayBuffer());
+	const result = await processImageToWebp(raw, input.label);
+	const key = finalStickerKey(input.packId, input.stickerId);
+	await uploadObject({ key, body: result.webp, contentType: "image/webp" });
+	return { r2Key: key, url: toPublicUrl(key), ...result };
 }
 
 export const packsRouter = {
@@ -303,7 +308,7 @@ export const packsRouter = {
 				},
 			});
 
-			const staged = await Promise.all(
+			const processed = await Promise.all(
 				pack.stickers.map(async (sticker, index) => {
 					const file = input.stickers[index];
 					if (!file) {
@@ -311,22 +316,30 @@ export const packsRouter = {
 							message: "Missing sticker upload",
 						});
 					}
-					const tempKey = await stageStickerFile({
+					const result = await processAndUploadSticker({
 						packId: pack.id,
 						stickerId: sticker.id,
 						file,
+						label: `Sticker #${index + 1}`,
 					});
-					await prisma.sticker.update({
-						where: { id: sticker.id },
-						data: { tempUrl: tempKey },
-					});
-					return { stickerId: sticker.id, tempKey, order: sticker.order };
+					return {
+						stickerId: sticker.id,
+						r2Key: result.r2Key,
+						url: result.url,
+						width: result.width,
+						height: result.height,
+						sizeBytes: result.sizeBytes,
+						order: sticker.order,
+					};
 				}),
 			);
 
-			await imageProcessQueue.add("process-pack", {
+			await imageProcessQueue.add("finalize-pack", {
 				packId: pack.id,
-				stickers: staged,
+				stickers: processed,
+			}, {
+				attempts: 3,
+				backoff: { type: "exponential", delay: 2000 },
 			});
 
 			return {
@@ -530,23 +543,31 @@ export const stickersRouter = {
 					order,
 				},
 			});
-			const tempKey = await stageStickerFile({
+			const result = await processAndUploadSticker({
 				packId: pack.id,
 				stickerId: sticker.id,
 				file: input.file,
+				label: "Sticker",
 			});
 
-			await prisma.sticker.update({
-				where: { id: sticker.id },
-				data: { tempUrl: tempKey },
-			});
 			await prisma.pack.update({
 				where: { id: pack.id },
 				data: { status: PackStatus.PROCESSING },
 			});
-			await imageProcessQueue.add("process-sticker", {
+			await imageProcessQueue.add("finalize-pack", {
 				packId: pack.id,
-				stickers: [{ stickerId: sticker.id, tempKey, order }],
+				stickers: [{
+					stickerId: sticker.id,
+					r2Key: result.r2Key,
+					url: result.url,
+					width: result.width,
+					height: result.height,
+					sizeBytes: result.sizeBytes,
+					order,
+				}],
+			}, {
+				attempts: 3,
+				backoff: { type: "exponential", delay: 2000 },
 			});
 
 			return {
@@ -678,7 +699,7 @@ export const savesRouter = {
 export const downloadRouter = {
 	trackDownload: publicProcedure
 		.input(packIdInput)
-		.handler(async ({ input }) => {
+		.handler(async ({ input, context }) => {
 			const existing = await prisma.pack.findFirst({
 				where: { id: input.packId, status: PackStatus.READY },
 				select: { id: true },
@@ -686,6 +707,16 @@ export const downloadRouter = {
 
 			if (!existing) {
 				throw new ORPCError("NOT_FOUND", { message: "Pack not found" });
+			}
+
+			const userId = context.session?.user.id;
+			if (userId) {
+				const dedupKey = `slap:user-downloads:${userId}`;
+				const alreadyDownloaded = await redis.sismember(dedupKey, input.packId);
+				if (alreadyDownloaded) {
+					return { tracked: false, alreadyDownloaded: true };
+				}
+				await redis.sadd(dedupKey, input.packId);
 			}
 
 			const pack = await prisma.pack.update({

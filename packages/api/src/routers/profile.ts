@@ -4,6 +4,8 @@ import type { Prisma } from "@slap/db/prisma/generated/client";
 import { z } from "zod";
 
 import { protectedProcedure } from "../index";
+import { uploadObject, toPublicUrl } from "../lib/storage";
+import { processImageToWebp } from "../lib/image-processing";
 
 const paginationInput = z.object({
 	limit: z.number().int().min(1).max(50).default(20),
@@ -24,6 +26,10 @@ const updateProfileInput = z.object({
 		.optional(),
 	bio: z.string().trim().max(280).nullable().optional(),
 	image: z.url().nullable().optional(),
+});
+
+const uploadPhotoInput = z.object({
+	photo: z.instanceof(File),
 });
 
 const packSummaryInclude = {
@@ -176,5 +182,39 @@ export const profileRouter = {
 				nextCursor:
 					packs.length > input.limit ? input.cursor + input.limit : undefined,
 			};
+		}),
+
+	uploadPhoto: protectedProcedure
+		.input(uploadPhotoInput)
+		.handler(async ({ input, context }) => {
+			const buffer = await input.photo.arrayBuffer();
+			const nodeBuffer = Buffer.from(buffer);
+
+			const processed = await processImageToWebp(nodeBuffer);
+			const photoKey = `users/${context.session.user.id}/profile-photo.webp`;
+
+			await uploadObject({
+				key: photoKey,
+				body: processed.webp,
+				contentType: "image/webp",
+			});
+
+			const photoUrl = toPublicUrl(photoKey);
+
+			const updatedUser = await prisma.user.update({
+				where: { id: context.session.user.id },
+				data: { image: photoUrl },
+				select: {
+					id: true,
+					name: true,
+					email: true,
+					username: true,
+					bio: true,
+					image: true,
+					createdAt: true,
+				},
+			});
+
+			return updatedUser;
 		}),
 };
