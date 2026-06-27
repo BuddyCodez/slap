@@ -1,8 +1,8 @@
 import sharp from "sharp";
 
-const MAX_DIMENSION = 768;
-const MAX_SIZE_BYTES = 768 * 1024;
-const QUALITY_STEPS = [90, 80, 70, 60] as const;
+const MAX_DIMENSION = 1024;
+const MAX_SIZE_BYTES = 1.5 * 1024 * 1024;
+const QUALITY_STEPS = [95, 90, 85, 80] as const;
 
 export interface ProcessedImage {
 	webp: Buffer;
@@ -43,7 +43,7 @@ export async function processImageToWebp(
 	}
 
 	throw new Error(
-		`${label ?? "Image"} exceeds 512 KB even at minimum quality — try a smaller or simpler image`,
+		`${label ?? "Image"} exceeds 1.5 MB even at minimum quality — try a smaller or simpler image`,
 	);
 }
 
