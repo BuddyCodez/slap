@@ -392,7 +392,9 @@ export default function ProfileScreen() {
 				{
 					method: "POST",
 					body: formData,
-					credentials: "include",
+					headers: {
+						Cookie: authClient.getCookie() || "",
+					},
 				},
 			);
 
