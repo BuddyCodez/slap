@@ -19,9 +19,7 @@ export async function processImageToWebp(
 	const metadata = await image.metadata();
 
 	if (!metadata.width || !metadata.height) {
-		throw new Error(
-			`${label ?? "Image"} has invalid or missing dimensions`,
-		);
+		throw new Error(`${label ?? "Image"} has invalid or missing dimensions`);
 	}
 
 	const needsResize =

@@ -7,9 +7,9 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 dotenv.config({ path: path.resolve(__dirname, "../../../apps/server/.env") });
 
-import { PrismaClient } from "../prisma/generated/client";
 import { PrismaPg } from "@prisma/adapter-pg";
 import pg from "pg";
+import { PrismaClient } from "../prisma/generated/client";
 
 const databaseUrl = process.env.DATABASE_URL;
 

@@ -1,29 +1,25 @@
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import * as ImagePicker from "expo-image-picker";
+import { ChevronLeft, Plus, Trash2 } from "lucide-react-native";
+import { useState } from "react";
 import {
 	Alert,
 	Image,
+	Pressable,
 	ScrollView,
 	Text,
 	TouchableOpacity,
 	View,
 } from "react-native";
-import * as ImagePicker from "expo-image-picker";
-import {
-	Plus,
-	Trash2,
-	ChevronLeft,
-} from "lucide-react-native";
-import { StyleSheet } from "react-native-unistyles";
-import { useState } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import Animated, {
-	useSharedValue,
 	useAnimatedStyle,
+	useSharedValue,
 	withSequence,
 	withSpring,
 } from "react-native-reanimated";
-import { Pressable } from "react-native";
+import { StyleSheet } from "react-native-unistyles";
 
-import { DotMatrixLoader } from "@/components/ui/DotMatrixLoader";
+import { ButtonSkeleton } from "@/components/ui/button-skeleton";
 import { authClient } from "@/lib/auth-client";
 import { orpc } from "@/utils/orpc";
 
@@ -38,17 +34,24 @@ interface PackDetailViewProps {
 	onDeleteSuccess: () => void;
 }
 
-export function PackDetailView({ packId, onBack, onDeleteSuccess }: PackDetailViewProps) {
+export function PackDetailView({
+	packId,
+	onBack,
+	onDeleteSuccess,
+}: PackDetailViewProps) {
 	const queryClient = useQueryClient();
 	const [isUploading, setIsUploading] = useState(false);
 	const backScale = useSharedValue(1);
 
-	const { data: activePackDetails, isLoading: isLoadingDetails, refetch: refetchDetails } =
-		useQuery(
-			orpc.packs.getStatus.queryOptions({
-				input: { packId },
-			})
-		);
+	const {
+		data: activePackDetails,
+		isLoading: isLoadingDetails,
+		refetch: refetchDetails,
+	} = useQuery(
+		orpc.packs.getStatus.queryOptions({
+			input: { packId },
+		}),
+	);
 
 	const deletePackMutation = useMutation(
 		orpc.packs.delete.mutationOptions({
@@ -62,7 +65,7 @@ export function PackDetailView({ packId, onBack, onDeleteSuccess }: PackDetailVi
 			onError: (err: any) => {
 				Alert.alert("ERROR", err.message || "Failed to delete pack.");
 			},
-		})
+		}),
 	);
 
 	const deleteStickerMutation = useMutation(
@@ -75,7 +78,7 @@ export function PackDetailView({ packId, onBack, onDeleteSuccess }: PackDetailVi
 			onError: (err: any) => {
 				Alert.alert("ERROR", err.message || "Failed to delete sticker.");
 			},
-		})
+		}),
 	);
 
 	const handleAddSingleSticker = async () => {
@@ -139,13 +142,23 @@ export function PackDetailView({ packId, onBack, onDeleteSuccess }: PackDetailVi
 	return (
 		<View style={styles.container}>
 			{/* Sticky ISO-style floating back button */}
-			<AnimatedPressable style={[styles.floatingBack, backAnimStyle]} onPress={handleBack}>
+			<AnimatedPressable
+				style={[styles.floatingBack, backAnimStyle]}
+				onPress={handleBack}
+			>
 				<ChevronLeft size={18} color="#FFF500" />
 			</AnimatedPressable>
 
 			{isLoadingDetails ? (
 				<View style={styles.loadingContainer}>
-					<DotMatrixLoader size={48} />
+					<View
+						style={{
+							width: 48,
+							height: 48,
+							backgroundColor: "#e0e0e0",
+							borderRadius: 4,
+						}}
+					/>
 				</View>
 			) : activePackDetails ? (
 				<ScrollView contentContainerStyle={styles.detailScroll}>
@@ -154,20 +167,30 @@ export function PackDetailView({ packId, onBack, onDeleteSuccess }: PackDetailVi
 
 					<View style={styles.detailHeaderCard}>
 						<View style={styles.detailHeaderInfo}>
-							<Text style={styles.detailPackName}>{activePackDetails.name.toUpperCase()}</Text>
-							<View style={[
-								styles.statusBadge,
-								activePackDetails.status === "READY" && styles.statusReady,
-								activePackDetails.status === "PROCESSING" && styles.statusProcessing,
-								activePackDetails.status === "FAILED" && styles.statusFailed,
-								{ alignSelf: "flex-start", marginTop: 6 }
-							]}>
-								<Text style={[
-									styles.statusText,
-									activePackDetails.status === "READY" && styles.statusReadyText,
-									activePackDetails.status === "PROCESSING" && styles.statusProcessingText,
-									activePackDetails.status === "FAILED" && styles.statusFailedText
-								]}>
+							<Text style={styles.detailPackName}>
+								{activePackDetails.name.toUpperCase()}
+							</Text>
+							<View
+								style={[
+									styles.statusBadge,
+									activePackDetails.status === "READY" && styles.statusReady,
+									activePackDetails.status === "PROCESSING" &&
+										styles.statusProcessing,
+									activePackDetails.status === "FAILED" && styles.statusFailed,
+									{ alignSelf: "flex-start", marginTop: 6 },
+								]}
+							>
+								<Text
+									style={[
+										styles.statusText,
+										activePackDetails.status === "READY" &&
+											styles.statusReadyText,
+										activePackDetails.status === "PROCESSING" &&
+											styles.statusProcessingText,
+										activePackDetails.status === "FAILED" &&
+											styles.statusFailedText,
+									]}
+								>
 									{activePackDetails.status}
 								</Text>
 							</View>
@@ -186,7 +209,7 @@ export function PackDetailView({ packId, onBack, onDeleteSuccess }: PackDetailVi
 											style: "destructive",
 											onPress: () => deletePackMutation.mutate({ packId }),
 										},
-									]
+									],
 								);
 							}}
 						>
@@ -196,14 +219,16 @@ export function PackDetailView({ packId, onBack, onDeleteSuccess }: PackDetailVi
 
 					<View style={styles.detailStickersSection}>
 						<View style={styles.stickersSectionHeader}>
-							<Text style={styles.sectionSubTitle}>STICKERS ({activePackDetails.stickers.length})</Text>
+							<Text style={styles.sectionSubTitle}>
+								STICKERS ({activePackDetails.stickers.length})
+							</Text>
 							<TouchableOpacity
 								style={styles.addStickerActionBtn}
 								onPress={handleAddSingleSticker}
 								disabled={isUploading}
 							>
 								{isUploading ? (
-									<DotMatrixLoader color="#000000" size={16} />
+									<ButtonSkeleton size="small" />
 								) : (
 									<>
 										<PlusIcon size={14} color="#000000" />
@@ -217,10 +242,21 @@ export function PackDetailView({ packId, onBack, onDeleteSuccess }: PackDetailVi
 							{activePackDetails.stickers.map((sticker: any) => (
 								<View key={sticker.id} style={styles.stickerCard}>
 									{sticker.url ? (
-										<Image source={{ uri: sticker.url }} style={styles.stickerImage} />
+										<Image
+											source={{ uri: sticker.url }}
+											style={styles.stickerImage}
+										/>
 									) : (
 										<View style={styles.stickerProcessingPlaceholder}>
-											<DotMatrixLoader size={20} />
+											<View
+												style={{
+													width: 20,
+													height: 20,
+													backgroundColor: "#e0e0e0",
+													borderRadius: 2,
+												}}
+											/>
+											23
 											<Text style={styles.stickerProcessingText}>COOKING</Text>
 										</View>
 									)}
@@ -236,9 +272,12 @@ export function PackDetailView({ packId, onBack, onDeleteSuccess }: PackDetailVi
 													{
 														text: "DELETE",
 														style: "destructive",
-														onPress: () => deleteStickerMutation.mutate({ stickerId: sticker.id }),
+														onPress: () =>
+															deleteStickerMutation.mutate({
+																stickerId: sticker.id,
+															}),
 													},
-												]
+												],
 											);
 										}}
 									>

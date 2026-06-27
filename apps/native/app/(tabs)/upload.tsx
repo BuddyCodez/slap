@@ -1,6 +1,6 @@
+import { Folder, Plus } from "lucide-react-native";
 import { useState } from "react";
 import { Text, TouchableOpacity, View } from "react-native";
-import { Plus, Folder } from "lucide-react-native";
 import { StyleSheet } from "react-native-unistyles";
 
 import { Screen } from "@/components/ui/screen";
@@ -21,73 +21,94 @@ export default function UploadScreen() {
 
 	return (
 		<View style={styles.root}>
-		<Screen scrollable={false}>
-			<View style={styles.container}>
-				{/* Header Tabs */}
-				<View style={styles.header}>
-					<Text style={styles.headerTitle}>CREATOR VAULT ⚡</Text>
-					<View style={styles.tabsContainer}>
-						<TouchableOpacity
-							style={[styles.tabButton, activeTab === "create" && styles.activeTabButton]}
-							onPress={() => {
-								setActiveTab("create");
-								setSelectedPackId(null);
-							}}
-						>
-							<PlusIcon size={16} color={activeTab === "create" ? "#000000" : "#707070"} />
-							<Text style={[styles.tabText, activeTab === "create" && styles.activeTabText]}>
-								CREATE
-							</Text>
-						</TouchableOpacity>
-						<TouchableOpacity
-							style={[styles.tabButton, activeTab === "my-packs" && styles.activeTabButton]}
-							onPress={() => {
-								setActiveTab("my-packs");
-								setSelectedPackId(null);
-							}}
-						>
-							<FolderIcon size={16} color={activeTab === "my-packs" ? "#000000" : "#707070"} />
-							<Text style={[styles.tabText, activeTab === "my-packs" && styles.activeTabText]}>
-								MY UPLOADS
-							</Text>
-						</TouchableOpacity>
+			<Screen scrollable={false}>
+				<View style={styles.container}>
+					{/* Header Tabs */}
+					<View style={styles.header}>
+						<Text style={styles.headerTitle}>CREATOR VAULT ⚡</Text>
+						<View style={styles.tabsContainer}>
+							<TouchableOpacity
+								style={[
+									styles.tabButton,
+									activeTab === "create" && styles.activeTabButton,
+								]}
+								onPress={() => {
+									setActiveTab("create");
+									setSelectedPackId(null);
+								}}
+							>
+								<PlusIcon
+									size={16}
+									color={activeTab === "create" ? "#000000" : "#707070"}
+								/>
+								<Text
+									style={[
+										styles.tabText,
+										activeTab === "create" && styles.activeTabText,
+									]}
+								>
+									CREATE
+								</Text>
+							</TouchableOpacity>
+							<TouchableOpacity
+								style={[
+									styles.tabButton,
+									activeTab === "my-packs" && styles.activeTabButton,
+								]}
+								onPress={() => {
+									setActiveTab("my-packs");
+									setSelectedPackId(null);
+								}}
+							>
+								<FolderIcon
+									size={16}
+									color={activeTab === "my-packs" ? "#000000" : "#707070"}
+								/>
+								<Text
+									style={[
+										styles.tabText,
+										activeTab === "my-packs" && styles.activeTabText,
+									]}
+								>
+									MY UPLOADS
+								</Text>
+							</TouchableOpacity>
+						</View>
+					</View>
+
+					{/* Tab content areas */}
+					<View style={styles.content}>
+						{activeTab === "create" && (
+							<CreatePackForm
+								onSuccess={() => setActiveTab("my-packs")}
+								tags={tags}
+								onTagsChange={setTags}
+								onOpenTagsSheet={() => setTagsSheetVisible(true)}
+							/>
+						)}
+
+						{activeTab === "my-packs" &&
+							(selectedPackId ? (
+								<PackDetailView
+									packId={selectedPackId}
+									onBack={() => setSelectedPackId(null)}
+									onDeleteSuccess={() => setSelectedPackId(null)}
+								/>
+							) : (
+								<MyPacksList
+									onSelectPack={(id) => setSelectedPackId(id)}
+									onNavigateToCreate={() => setActiveTab("create")}
+								/>
+							))}
 					</View>
 				</View>
-
-				{/* Tab content areas */}
-				<View style={styles.content}>
-					{activeTab === "create" && (
-						<CreatePackForm
-							onSuccess={() => setActiveTab("my-packs")}
-							tags={tags}
-							onTagsChange={setTags}
-							onOpenTagsSheet={() => setTagsSheetVisible(true)}
-						/>
-					)}
-
-					{activeTab === "my-packs" && (
-						selectedPackId ? (
-							<PackDetailView
-								packId={selectedPackId}
-								onBack={() => setSelectedPackId(null)}
-								onDeleteSuccess={() => setSelectedPackId(null)}
-							/>
-						) : (
-							<MyPacksList
-								onSelectPack={(id) => setSelectedPackId(id)}
-								onNavigateToCreate={() => setActiveTab("create")}
-							/>
-						)
-					)}
-				</View>
-			</View>
-		</Screen>
-		<TagsSheet
-			visible={tagsSheetVisible}
-			tags={tags}
-			onClose={() => setTagsSheetVisible(false)}
-			onChange={setTags}
-		/>
+			</Screen>
+			<TagsSheet
+				visible={tagsSheetVisible}
+				tags={tags}
+				onClose={() => setTagsSheetVisible(false)}
+				onChange={setTags}
+			/>
 		</View>
 	);
 }

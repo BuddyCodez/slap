@@ -6,9 +6,16 @@ import { RPCHandler } from "@orpc/server/fetch";
 import { ZodToJsonSchemaConverter } from "@orpc/zod/zod4";
 import { createContext } from "@slap/api/context";
 import { processImageToWebp } from "@slap/api/lib/image-processing";
-import { imageProcessQueue, scheduleTrendingRecalc } from "@slap/api/lib/queues";
+import {
+	imageProcessQueue,
+	scheduleTrendingRecalc,
+} from "@slap/api/lib/queues";
 import { redis } from "@slap/api/lib/redis";
-import { finalStickerKey, toPublicUrl, uploadObject } from "@slap/api/lib/storage";
+import {
+	finalStickerKey,
+	toPublicUrl,
+	uploadObject,
+} from "@slap/api/lib/storage";
 import { validateStickerUpload } from "@slap/api/lib/uploads";
 import { appRouter } from "@slap/api/routers/index";
 import "@slap/api/workers/index";
@@ -113,8 +120,8 @@ new Elysia()
 				headers: request.headers,
 			});
 
-      if (!session?.user) {
-        console.log("No sess");
+			if (!session?.user) {
+				console.log("No sess");
 				return new Response("Unauthorized", { status: 401 });
 			}
 
@@ -158,7 +165,7 @@ new Elysia()
 			if (!name) {
 				return new Response(
 					JSON.stringify({ error: "Pack name is required" }),
-					{ status: 400, headers: { "Content-Type": "application/json" } }
+					{ status: 400, headers: { "Content-Type": "application/json" } },
 				);
 			}
 
@@ -167,7 +174,7 @@ new Elysia()
 					JSON.stringify({
 						error: "Add between 1 and 30 stickers",
 					}),
-					{ status: 400, headers: { "Content-Type": "application/json" } }
+					{ status: 400, headers: { "Content-Type": "application/json" } },
 				);
 			}
 
@@ -186,7 +193,7 @@ new Elysia()
 						{
 							status: 429,
 							headers: { "Content-Type": "application/json" },
-						}
+						},
 					);
 				}
 
@@ -253,18 +260,29 @@ new Elysia()
 						}
 
 						// Decode base64 to Buffer
-						const raw = Buffer.from(stickerData.base64, 'base64');
+						const raw = Buffer.from(stickerData.base64, "base64");
 
 						// Create a File-like object for validation
 						const filelike = {
-							arrayBuffer: async () => raw.buffer.slice(raw.byteOffset, raw.byteOffset + raw.byteLength),
+							arrayBuffer: async () =>
+								raw.buffer.slice(
+									raw.byteOffset,
+									raw.byteOffset + raw.byteLength,
+								),
 						} as File;
 
 						await validateStickerUpload(filelike);
-						const result = await processImageToWebp(raw, `Sticker #${index + 1}`);
+						const result = await processImageToWebp(
+							raw,
+							`Sticker #${index + 1}`,
+						);
 
 						const key = finalStickerKey(pack.id, sticker.id);
-						await uploadObject({ key, body: result.webp, contentType: "image/webp" });
+						await uploadObject({
+							key,
+							body: result.webp,
+							contentType: "image/webp",
+						});
 
 						return {
 							stickerId: sticker.id,
@@ -279,13 +297,17 @@ new Elysia()
 				);
 
 				// Queue lightweight finalization (DB updates + thumbnail)
-				await imageProcessQueue.add("finalize-pack", {
-					packId: pack.id,
-					stickers: processed,
-				}, {
-					attempts: 3,
-					backoff: { type: "exponential", delay: 2000 },
-				});
+				await imageProcessQueue.add(
+					"finalize-pack",
+					{
+						packId: pack.id,
+						stickers: processed,
+					},
+					{
+						attempts: 3,
+						backoff: { type: "exponential", delay: 2000 },
+					},
+				);
 
 				return new Response(
 					JSON.stringify({
@@ -295,7 +317,7 @@ new Elysia()
 					{
 						status: 200,
 						headers: { "Content-Type": "application/json" },
-					}
+					},
 				);
 			} catch (error) {
 				console.error("Pack creation error:", error);
@@ -309,7 +331,7 @@ new Elysia()
 		},
 		{
 			parse: "none",
-		}
+		},
 	)
 	.post(
 		"/api/stickers/add-formdata",
@@ -343,10 +365,10 @@ new Elysia()
 				});
 
 				if (!pack) {
-					return new Response(
-						JSON.stringify({ error: "Pack not found" }),
-						{ status: 404, headers: { "Content-Type": "application/json" } },
-					);
+					return new Response(JSON.stringify({ error: "Pack not found" }), {
+						status: 404,
+						headers: { "Content-Type": "application/json" },
+					});
 				}
 
 				if (pack.creatorId !== session.user.id) {
@@ -366,7 +388,11 @@ new Elysia()
 				});
 
 				const key = finalStickerKey(packId, sticker.id);
-				await uploadObject({ key, body: result.webp, contentType: "image/webp" });
+				await uploadObject({
+					key,
+					body: result.webp,
+					contentType: "image/webp",
+				});
 				const url = toPublicUrl(key);
 
 				await prisma.sticker.update({
@@ -392,7 +418,8 @@ new Elysia()
 				);
 			} catch (error) {
 				console.error("Sticker add error:", error);
-				const message = error instanceof Error ? error.message : "Failed to add sticker";
+				const message =
+					error instanceof Error ? error.message : "Failed to add sticker";
 				return new Response(JSON.stringify({ error: message }), {
 					status: 500,
 					headers: { "Content-Type": "application/json" },

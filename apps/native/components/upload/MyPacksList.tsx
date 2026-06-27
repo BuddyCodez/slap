@@ -1,3 +1,5 @@
+import { useQuery } from "@tanstack/react-query";
+import { Folder } from "lucide-react-native";
 import {
 	ActivityIndicator,
 	FlatList,
@@ -6,9 +8,7 @@ import {
 	TouchableOpacity,
 	View,
 } from "react-native";
-import { Folder } from "lucide-react-native";
 import { StyleSheet } from "react-native-unistyles";
-import { useQuery } from "@tanstack/react-query";
 
 import { orpc } from "@/utils/orpc";
 
@@ -20,11 +20,14 @@ interface MyPacksListProps {
 	onNavigateToCreate: () => void;
 }
 
-export function MyPacksList({ onSelectPack, onNavigateToCreate }: MyPacksListProps) {
+export function MyPacksList({
+	onSelectPack,
+	onNavigateToCreate,
+}: MyPacksListProps) {
 	const { data: myPacksData, isLoading: isLoadingMyPacks } = useQuery(
 		orpc.packs.myPacks.queryOptions({
 			input: { limit: 30, cursor: 0 },
-		})
+		}),
 	);
 
 	return (
@@ -47,7 +50,10 @@ export function MyPacksList({ onSelectPack, onNavigateToCreate }: MyPacksListPro
 						>
 							<View style={styles.packCardLeft}>
 								{item.thumbnail ? (
-									<Image source={{ uri: item.thumbnail }} style={styles.packThumbnail} />
+									<Image
+										source={{ uri: item.thumbnail }}
+										style={styles.packThumbnail}
+									/>
 								) : (
 									<View style={styles.fallbackThumbnail}>
 										<Text style={styles.fallbackText}>📦</Text>
@@ -55,23 +61,30 @@ export function MyPacksList({ onSelectPack, onNavigateToCreate }: MyPacksListPro
 								)}
 								<View style={styles.packCardInfo}>
 									<Text style={styles.packName}>{item.name.toUpperCase()}</Text>
-									<Text style={styles.packCategory}>{item.category?.toUpperCase() || "TRENDING"}</Text>
+									<Text style={styles.packCategory}>
+										{item.category?.toUpperCase() || "TRENDING"}
+									</Text>
 								</View>
 							</View>
 
 							<View style={styles.packCardRight}>
-								<View style={[
-									styles.statusBadge,
-									item.status === "READY" && styles.statusReady,
-									item.status === "PROCESSING" && styles.statusProcessing,
-									item.status === "FAILED" && styles.statusFailed
-								]}>
-									<Text style={[
-										styles.statusText,
-										item.status === "READY" && styles.statusReadyText,
-										item.status === "PROCESSING" && styles.statusProcessingText,
-										item.status === "FAILED" && styles.statusFailedText
-									]}>
+								<View
+									style={[
+										styles.statusBadge,
+										item.status === "READY" && styles.statusReady,
+										item.status === "PROCESSING" && styles.statusProcessing,
+										item.status === "FAILED" && styles.statusFailed,
+									]}
+								>
+									<Text
+										style={[
+											styles.statusText,
+											item.status === "READY" && styles.statusReadyText,
+											item.status === "PROCESSING" &&
+												styles.statusProcessingText,
+											item.status === "FAILED" && styles.statusFailedText,
+										]}
+									>
 										{item.status}
 									</Text>
 								</View>
@@ -83,7 +96,10 @@ export function MyPacksList({ onSelectPack, onNavigateToCreate }: MyPacksListPro
 				<View style={styles.emptyContainer}>
 					<FolderIcon size={48} color="#707070" style={{ marginBottom: 12 }} />
 					<Text style={styles.emptyText}>NO PACKS UPLOADED YET.</Text>
-					<TouchableOpacity style={styles.emptyBtn} onPress={onNavigateToCreate}>
+					<TouchableOpacity
+						style={styles.emptyBtn}
+						onPress={onNavigateToCreate}
+					>
 						<Text style={styles.emptyBtnText}>COOK YOUR FIRST PACK</Text>
 					</TouchableOpacity>
 				</View>

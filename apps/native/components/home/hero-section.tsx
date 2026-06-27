@@ -22,7 +22,8 @@ export function HeroSection({ slapCount = 12_432 }: HeroSectionProps) {
 				<View style={styles.bannerShadow} />
 				<View style={styles.banner}>
 					<Text style={styles.bannerText}>
-						⚡ CLOUT CHECK: {formatCount(slapCount).toUpperCase()}+ SLAPPED TODAY
+						⚡ CLOUT CHECK: {formatCount(slapCount).toUpperCase()}+ SLAPPED
+						TODAY
 					</Text>
 				</View>
 			</View>

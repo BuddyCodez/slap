@@ -1,23 +1,38 @@
-import { LucideIcon, Zap, Shield, Sparkles, Copy, RefreshCw, Trash2, ArrowRight } from "lucide-react-native";
 import * as Haptics from "expo-haptics";
-import { useEffect, useState, useRef } from "react";
-import { Pressable, Text, View, ScrollView, Dimensions, AppState } from "react-native";
+import { router } from "expo-router";
+import {
+	ArrowRight,
+	Copy,
+	LucideIcon,
+	RefreshCw,
+	Shield,
+	Sparkles,
+	Trash2,
+	Zap,
+} from "lucide-react-native";
+import { useEffect, useRef, useState } from "react";
+import {
+	AppState,
+	Dimensions,
+	Pressable,
+	ScrollView,
+	Text,
+	View,
+} from "react-native";
 import Animated, {
-	useSharedValue,
+	Easing,
+	interpolate,
 	useAnimatedStyle,
+	useSharedValue,
 	withDelay,
-	withTiming,
 	withRepeat,
 	withSpring,
-	interpolate,
-	Easing,
+	withTiming,
 } from "react-native-reanimated";
 import { StyleSheet, useUnistyles } from "react-native-unistyles";
-
-import { router } from "expo-router";
 import { OtpBottomSheet } from "@/components/auth/otp-bottom-sheet";
 import { authClient } from "@/lib/auth-client";
-import { queryClient, client } from "@/utils/orpc";
+import { client, queryClient } from "@/utils/orpc";
 
 const { width: SCREEN_W } = Dimensions.get("window");
 
@@ -40,10 +55,7 @@ function BrutalistButton({
 	const animatedStyle = useAnimatedStyle(() => {
 		const offset = isPressed.value * 6; // Shift depth (increased to 6 for a more 3D effect)
 		return {
-			transform: [
-				{ translateX: offset },
-				{ translateY: offset },
-			],
+			transform: [{ translateX: offset }, { translateY: offset }],
 			shadowOffset: {
 				width: 6 - offset,
 				height: 6 - offset,
@@ -158,16 +170,28 @@ export default function AuthScreen() {
 
 	useEffect(() => {
 		// Fast spring entrance stagger for sticker cards
-		scale1.value = withDelay(100, withSpring(1, { damping: 9, stiffness: 180 }));
-		scale2.value = withDelay(250, withSpring(1, { damping: 9, stiffness: 180 }));
-		scale3.value = withDelay(400, withSpring(1, { damping: 9, stiffness: 180 }));
-		scale4.value = withDelay(555, withSpring(1, { damping: 9, stiffness: 180 }));
+		scale1.value = withDelay(
+			100,
+			withSpring(1, { damping: 9, stiffness: 180 }),
+		);
+		scale2.value = withDelay(
+			250,
+			withSpring(1, { damping: 9, stiffness: 180 }),
+		);
+		scale3.value = withDelay(
+			400,
+			withSpring(1, { damping: 9, stiffness: 180 }),
+		);
+		scale4.value = withDelay(
+			555,
+			withSpring(1, { damping: 9, stiffness: 180 }),
+		);
 
 		// Infinite linear marquee translation
 		tickerX.value = withRepeat(
 			withTiming(-480, { duration: 10000, easing: Easing.linear }),
 			-1,
-			false
+			false,
 		);
 	}, []);
 
@@ -208,10 +232,11 @@ export default function AuthScreen() {
 		setError(null);
 
 		try {
-			const { data, error: err } = await authClient.emailOtp.sendVerificationOtp({
-				email: email.trim(),
-				type: "sign-in",
-			});
+			const { data, error: err } =
+				await authClient.emailOtp.sendVerificationOtp({
+					email: email.trim(),
+					type: "sign-in",
+				});
 
 			if (err) {
 				setError(err.message ?? "Could not send code");
@@ -282,7 +307,8 @@ export default function AuthScreen() {
 		);
 	};
 
-	const tickerText = "WHATSAPP EXPORT ⚡ INSTAGRAM READY ⚡ CROSS-PLATFORM ⚡ NO SILOS ⚡ ";
+	const tickerText =
+		"WHATSAPP EXPORT ⚡ INSTAGRAM READY ⚡ CROSS-PLATFORM ⚡ NO SILOS ⚡ ";
 
 	return (
 		<View style={styles.root}>
@@ -304,25 +330,53 @@ export default function AuthScreen() {
 				{/* Messy Tactile Sticker Bomb Showcase */}
 				<View style={styles.stickerBombArea}>
 					{/* Sticker 1 */}
-					<Animated.View style={[styles.stickerCard, styles.cardYellow, styles.sticker1, animCard1]}>
+					<Animated.View
+						style={[
+							styles.stickerCard,
+							styles.cardYellow,
+							styles.sticker1,
+							animCard1,
+						]}
+					>
 						<Text style={styles.stickerTitle}>ANGRY CATS 😾</Text>
 						<Text style={styles.stickerMeta}>24 PACK</Text>
 					</Animated.View>
 
 					{/* Sticker 2 */}
-					<Animated.View style={[styles.stickerCard, styles.cardWhite, styles.sticker2, animCard2]}>
+					<Animated.View
+						style={[
+							styles.stickerCard,
+							styles.cardWhite,
+							styles.sticker2,
+							animCard2,
+						]}
+					>
 						<Text style={styles.stickerTitle}>MEMES 🇮🇳</Text>
 						<Text style={styles.stickerMeta}>18 PACK</Text>
 					</Animated.View>
 
 					{/* Sticker 3 */}
-					<Animated.View style={[styles.stickerCard, styles.cardGreen, styles.sticker3, animCard3]}>
+					<Animated.View
+						style={[
+							styles.stickerCard,
+							styles.cardGreen,
+							styles.sticker3,
+							animCard3,
+						]}
+					>
 						<Text style={styles.stickerTitle}>ANIME RX 🎌</Text>
 						<Text style={styles.stickerMeta}>32 PACK</Text>
 					</Animated.View>
 
 					{/* Sticker 4 */}
-					<Animated.View style={[styles.stickerCard, styles.cardRed, styles.sticker4, animCard4]}>
+					<Animated.View
+						style={[
+							styles.stickerCard,
+							styles.cardRed,
+							styles.sticker4,
+							animCard4,
+						]}
+					>
 						<Text style={styles.stickerTitle}>CHAOS VAULT 💀</Text>
 						<Text style={styles.stickerMeta}>45 PACK</Text>
 					</Animated.View>
@@ -331,7 +385,9 @@ export default function AuthScreen() {
 				{/* Continuous Infinite Marquee Ticker */}
 				<View style={styles.tickerContainer}>
 					<Animated.View style={[styles.tickerRow, animTicker]}>
-						<Text numberOfLines={1} style={styles.tickerText}>{tickerText + tickerText + tickerText}</Text>
+						<Text numberOfLines={1} style={styles.tickerText}>
+							{tickerText + tickerText + tickerText}
+						</Text>
 					</Animated.View>
 				</View>
 			</ScrollView>
@@ -459,7 +515,7 @@ const styles = StyleSheet.create((theme) => ({
 		marginVertical: theme.spacing.md,
 		position: "relative",
 		justifyContent: "center",
-    alignItems: "center",
+		alignItems: "center",
 	},
 	stickerCard: {
 		position: "absolute",

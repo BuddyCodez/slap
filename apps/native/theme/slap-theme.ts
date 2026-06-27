@@ -1,7 +1,7 @@
 import { palette } from "./tokens/colors";
 import { borderRadius, shadows } from "./tokens/effects";
-import { fontFamily, fontSize, fontWeight } from "./tokens/typography";
 import { spacing } from "./tokens/spacing";
+import { fontFamily, fontSize, fontWeight } from "./tokens/typography";
 
 export const slapTheme = {
 	colors: {

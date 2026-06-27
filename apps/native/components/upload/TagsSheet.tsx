@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { Plus, X } from "lucide-react-native";
+import { useEffect, useState } from "react";
 import {
 	Dimensions,
 	Keyboard,
@@ -17,8 +18,6 @@ import Animated, {
 	withTiming,
 } from "react-native-reanimated";
 import { StyleSheet } from "react-native-unistyles";
-import { X, Plus } from "lucide-react-native";
-import { useEffect } from "react";
 
 const XIcon = X as any;
 const PlusIcon = Plus as any;
@@ -32,7 +31,12 @@ export interface TagsSheetProps {
 	onChange: (tags: string[]) => void;
 }
 
-export function TagsSheet({ visible, tags, onClose, onChange }: TagsSheetProps) {
+export function TagsSheet({
+	visible,
+	tags,
+	onClose,
+	onChange,
+}: TagsSheetProps) {
 	const [inputValue, setInputValue] = useState("");
 	const translateY = useSharedValue(SCREEN_H);
 
@@ -58,9 +62,13 @@ export function TagsSheet({ visible, tags, onClose, onChange }: TagsSheetProps) 
 		})
 		.onEnd((event) => {
 			if (event.translationY > 150 || event.velocityY > 500) {
-				translateY.value = withTiming(SCREEN_H, { duration: 220 }, (finished) => {
-					if (finished) runOnJS(onClose)();
-				});
+				translateY.value = withTiming(
+					SCREEN_H,
+					{ duration: 220 },
+					(finished) => {
+						if (finished) runOnJS(onClose)();
+					},
+				);
 			} else {
 				translateY.value = withTiming(0, { duration: 200 });
 			}
@@ -112,7 +120,9 @@ export function TagsSheet({ visible, tags, onClose, onChange }: TagsSheetProps) 
 						</Pressable>
 					</View>
 
-					<Text style={styles.subtitle}>Type a tag and press ADD to include it.</Text>
+					<Text style={styles.subtitle}>
+						Type a tag and press ADD to include it.
+					</Text>
 
 					<View style={styles.inputRow}>
 						<View style={styles.inputWrap}>
@@ -174,8 +184,8 @@ const styles = StyleSheet.create((theme) => ({
 		width: "100%",
 		paddingHorizontal: 24,
 		paddingTop: 20,
-    paddingBottom: 44,
-    borderRadius: 10
+		paddingBottom: 44,
+		borderRadius: 10,
 	},
 	handleWrap: {
 		alignItems: "center",

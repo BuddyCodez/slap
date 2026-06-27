@@ -1,7 +1,15 @@
 import { Image, Pressable, ScrollView, Text, View } from "react-native";
 import { StyleSheet } from "react-native-unistyles";
 
-const ROTATIONS = ["-2.5deg", "3deg", "-1.5deg", "2deg", "4deg", "-3deg", "1.5deg"];
+const ROTATIONS = [
+	"-2.5deg",
+	"3deg",
+	"-1.5deg",
+	"2deg",
+	"4deg",
+	"-3deg",
+	"1.5deg",
+];
 const BADGES = ["🔥 HOT", "💥 NEW DROP", "⭐ FIRE", "💎 RARE", "🔥 HOT"];
 
 type Pack = {
@@ -35,22 +43,37 @@ export function TrendingRow({ packs, onPackPress }: TrendingRowProps) {
 						onPress={() => onPackPress?.(pack.id)}
 						style={({ pressed }) => [{ opacity: pressed ? 0.85 : 1 }]}
 					>
-						<View style={[styles.cardWrap, { transform: [{ rotate: ROTATIONS[i % ROTATIONS.length] }] }]}>
+						<View
+							style={[
+								styles.cardWrap,
+								{ transform: [{ rotate: ROTATIONS[i % ROTATIONS.length] }] },
+							]}
+						>
 							<View style={styles.cardShadow} />
 							<View style={styles.card}>
 								{pack.thumbnail ? (
-									<Image source={{ uri: pack.thumbnail }} style={styles.cardThumb} resizeMode="cover" />
+									<Image
+										source={{ uri: pack.thumbnail }}
+										style={styles.cardThumb}
+										resizeMode="cover"
+									/>
 								) : (
 									<View style={styles.cardThumbPlaceholder}>
 										<Text style={styles.cardEmoji}>📦</Text>
 									</View>
 								)}
 								<View style={styles.cardInfo}>
-									<Text style={styles.cardName} numberOfLines={1}>{pack.name.toUpperCase()}</Text>
-									<Text style={styles.cardCreator}>@{(pack.creator?.name || "unknown").toUpperCase()}</Text>
+									<Text style={styles.cardName} numberOfLines={1}>
+										{pack.name.toUpperCase()}
+									</Text>
+									<Text style={styles.cardCreator}>
+										@{(pack.creator?.name || "unknown").toUpperCase()}
+									</Text>
 								</View>
 								<View style={styles.badge}>
-									<Text style={styles.badgeText}>{BADGES[i % BADGES.length]}</Text>
+									<Text style={styles.badgeText}>
+										{BADGES[i % BADGES.length]}
+									</Text>
 								</View>
 							</View>
 						</View>

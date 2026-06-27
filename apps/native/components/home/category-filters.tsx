@@ -1,7 +1,7 @@
+import { Ionicons } from "@expo/vector-icons";
 import { useQuery } from "@tanstack/react-query";
 import * as Haptics from "expo-haptics";
 import { Pressable, ScrollView, Text, View } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
 import Animated, {
 	useAnimatedStyle,
 	useSharedValue,
@@ -84,7 +84,7 @@ export function CategoryFilters({
 	onToggle,
 }: CategoryFiltersProps) {
 	const { data: categories = [] } = useQuery(
-		orpc.categories.list.queryOptions()
+		orpc.categories.list.queryOptions(),
 	);
 
 	return (

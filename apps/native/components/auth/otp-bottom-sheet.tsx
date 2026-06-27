@@ -38,10 +38,7 @@ function BrutalistSheetButton({
 	const animatedStyle = useAnimatedStyle(() => {
 		const offset = isPressed.value * 4;
 		return {
-			transform: [
-				{ translateX: offset },
-				{ translateY: offset },
-			],
+			transform: [{ translateX: offset }, { translateY: offset }],
 			shadowOffset: {
 				width: 4 - offset,
 				height: 4 - offset,
@@ -142,10 +139,9 @@ export function OtpBottomSheet({
 			translateY.value = withTiming(0, { duration: 300 });
 			const timer = setTimeout(() => emailInputRef.current?.focus(), 350);
 			return () => clearTimeout(timer);
-		} else {
-			Keyboard.dismiss();
-			translateY.value = withTiming(SCREEN_H, { duration: 250 });
 		}
+		Keyboard.dismiss();
+		translateY.value = withTiming(SCREEN_H, { duration: 250 });
 	}, [visible, translateY]);
 
 	const panGesture = Gesture.Pan()
@@ -183,11 +179,11 @@ export function OtpBottomSheet({
 		if (!email.trim() || loading || loadingLocal) return;
 		setError(null);
 		setLoadingLocal(true);
-		
+
 		try {
 			const exists = await checkEmailExists(email.trim());
 			setLoadingLocal(false);
-			
+
 			if (exists) {
 				const success = await onSendOtp();
 				if (success) {
@@ -211,7 +207,9 @@ export function OtpBottomSheet({
 
 		const usernameRegex = /^[a-zA-Z0-9_]{3,30}$/;
 		if (!usernameRegex.test(username.trim())) {
-			setError("Username must be 3-30 characters (letters, numbers, underscores)");
+			setError(
+				"Username must be 3-30 characters (letters, numbers, underscores)",
+			);
 			return;
 		}
 
@@ -281,11 +279,7 @@ export function OtpBottomSheet({
 							) : null}
 
 							<View style={styles.inputWrap}>
-								<Ionicons
-									name="mail-outline"
-									size={18}
-									color="#A3A3B3"
-								/>
+								<Ionicons name="mail-outline" size={18} color="#A3A3B3" />
 								<TextInput
 									ref={emailInputRef}
 									value={email}
@@ -323,11 +317,7 @@ export function OtpBottomSheet({
 							) : null}
 
 							<View style={styles.inputWrap}>
-								<Ionicons
-									name="at-outline"
-									size={18}
-									color="#A3A3B3"
-								/>
+								<Ionicons name="at-outline" size={18} color="#A3A3B3" />
 								<TextInput
 									ref={usernameInputRef}
 									value={username}
@@ -428,7 +418,9 @@ export function OtpBottomSheet({
 									]}
 								>
 									<Ionicons name="copy-outline" size={14} color="#FFF500" />
-									<Text style={styles.helperText}>PASTE CODE AUTOMATICALLY</Text>
+									<Text style={styles.helperText}>
+										PASTE CODE AUTOMATICALLY
+									</Text>
 								</Pressable>
 
 								<Pressable
@@ -451,7 +443,9 @@ export function OtpBottomSheet({
 											resendTimer === 0 && { color: "#FFF500" },
 										]}
 									>
-										{resendTimer > 0 ? `RESEND IN ${resendTimer}S` : "RESEND CODE"}
+										{resendTimer > 0
+											? `RESEND IN ${resendTimer}S`
+											: "RESEND CODE"}
 									</Text>
 								</Pressable>
 							</View>

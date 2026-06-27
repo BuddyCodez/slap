@@ -47,14 +47,18 @@ export function createAuth() {
 			user: {
 				create: {
 					before: async (user) => {
-						const emailLocal = (user.email ? user.email.split("@")[0] : "slap") || "slap";
-						const cleanLocal = emailLocal.replace(/[^a-zA-Z0-9]/g, "").toLowerCase();
+						const emailLocal =
+							(user.email ? user.email.split("@")[0] : "slap") || "slap";
+						const cleanLocal = emailLocal
+							.replace(/[^a-zA-Z0-9]/g, "")
+							.toLowerCase();
 						const randomDigits = Math.floor(1000 + Math.random() * 9000);
 						return {
 							data: {
 								...user,
 								name: user.name || emailLocal,
-								username: user.username || `${cleanLocal || "slap"}_${randomDigits}`,
+								username:
+									user.username || `${cleanLocal || "slap"}_${randomDigits}`,
 							},
 						};
 					},

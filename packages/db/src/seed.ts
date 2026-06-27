@@ -7,11 +7,11 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 dotenv.config({ path: path.resolve(__dirname, "../../../apps/server/.env") });
 
-import { PrismaClient } from "../prisma/generated/client";
 import { PrismaPg } from "@prisma/adapter-pg";
+import { AwsClient } from "aws4fetch";
 import pg from "pg";
 import sharp from "sharp";
-import { AwsClient } from "aws4fetch";
+import { PrismaClient } from "../prisma/generated/client";
 
 const databaseUrl = process.env.DATABASE_URL;
 const r2AccountId = process.env.R2_ACCOUNT_ID;
@@ -20,7 +20,13 @@ const r2SecretAccessKey = process.env.R2_SECRET_ACCESS_KEY;
 const r2BucketName = process.env.R2_BUCKET_NAME || "slap-assets";
 const r2PublicUrl = process.env.R2_PUBLIC_URL || "";
 
-if (!databaseUrl || !r2AccountId || !r2AccessKeyId || !r2SecretAccessKey || !r2PublicUrl) {
+if (
+	!databaseUrl ||
+	!r2AccountId ||
+	!r2AccessKeyId ||
+	!r2SecretAccessKey ||
+	!r2PublicUrl
+) {
 	console.error("Missing environment variables in apps/server/.env");
 	process.exit(1);
 }
@@ -197,7 +203,10 @@ const PACKS_DATA = [
 	},
 ];
 
-async function generateStickerWebP(emoji: string, text: string): Promise<Buffer> {
+async function generateStickerWebP(
+	emoji: string,
+	text: string,
+): Promise<Buffer> {
 	const width = 256;
 	const height = 256;
 	const svg = `
@@ -257,7 +266,9 @@ async function main() {
 			},
 		});
 
-		console.log(`Pack ID: ${pack.id}. Generating and uploading ${packData.stickers.length} stickers...`);
+		console.log(
+			`Pack ID: ${pack.id}. Generating and uploading ${packData.stickers.length} stickers...`,
+		);
 
 		// Generate and upload stickers
 		const createdStickers = [];
@@ -292,13 +303,18 @@ async function main() {
 			});
 
 			createdStickers.push(updatedSticker);
-			console.log(`Uploaded sticker ${i + 1}/${packData.stickers.length}: ${updatedSticker.id}`);
+			console.log(
+				`Uploaded sticker ${i + 1}/${packData.stickers.length}: ${updatedSticker.id}`,
+			);
 		}
 
 		// Generate thumbnail from first sticker webp buffer
 		const firstSticker = packData.stickers[0];
 		if (!firstSticker) continue;
-		const firstStickerWebp = await generateStickerWebP(firstSticker.emoji, firstSticker.text);
+		const firstStickerWebp = await generateStickerWebP(
+			firstSticker.emoji,
+			firstSticker.text,
+		);
 		const thumbWebp = await sharp(firstStickerWebp)
 			.resize(96, 96, { fit: "inside" })
 			.webp({ quality: 85 })

@@ -3,9 +3,9 @@ import prisma from "@slap/db";
 import type { Prisma } from "@slap/db/prisma/generated/client";
 import { z } from "zod";
 
-import { protectedProcedure } from "../index";
-import { uploadObject, toPublicUrl } from "../lib/storage";
+import { protectedProcedure, publicProcedure } from "../index";
 import { processImageToWebp } from "../lib/image-processing";
+import { toPublicUrl, uploadObject } from "../lib/storage";
 
 const paginationInput = z.object({
 	limit: z.number().int().min(1).max(50).default(20),
@@ -29,7 +29,7 @@ const updateProfileInput = z.object({
 });
 
 const uploadPhotoInput = z.object({
-	photo: z.instanceof(File),
+	photo: z.instanceof(Blob),
 });
 
 const packSummaryInclude = {
@@ -122,6 +122,51 @@ export const profileRouter = {
 			savedPackCount: user._count.saves,
 		};
 	}),
+
+	get: publicProcedure
+		.input(z.object({ userId: z.string() }))
+		.handler(async ({ input }) => {
+			const user = await prisma.user.findUnique({
+				where: { id: input.userId },
+				select: {
+					id: true,
+					name: true,
+					username: true,
+					bio: true,
+					image: true,
+					createdAt: true,
+					_count: {
+						select: {
+							packs: true,
+							saves: true,
+						},
+					},
+				},
+			});
+
+			if (!user) {
+				throw new ORPCError("NOT_FOUND", { message: "User not found" });
+			}
+
+			const packs = await prisma.pack.findMany({
+				where: { creatorId: input.userId },
+				include: packSummaryInclude,
+				orderBy: { createdAt: "desc" },
+				take: 20,
+			});
+
+			return {
+				id: user.id,
+				name: user.name,
+				username: user.username,
+				bio: user.bio,
+				image: user.image,
+				createdAt: user.createdAt,
+				packCount: user._count.packs,
+				savedPackCount: user._count.saves,
+				packs: packs.map(mapPackSummary),
+			};
+		}),
 
 	update: protectedProcedure
 		.input(updateProfileInput)

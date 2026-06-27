@@ -1,5 +1,5 @@
 import * as Haptics from "expo-haptics";
-import { Pressable, Text, View, Image } from "react-native";
+import { Image, Pressable, Text, View } from "react-native";
 import Animated, {
 	useAnimatedStyle,
 	useSharedValue,
@@ -44,7 +44,11 @@ export function TrendingPackCard({ pack, onPress }: TrendingPackCardProps) {
 			{/* Sticker / Emoji Preview Box */}
 			<View style={styles.thumb}>
 				{imageUrl ? (
-					<Image source={{ uri: imageUrl }} style={styles.previewImage} resizeMode="contain" />
+					<Image
+						source={{ uri: imageUrl }}
+						style={styles.previewImage}
+						resizeMode="contain"
+					/>
 				) : (
 					<Text style={styles.emoji}>{pack.emoji || "⚡"}</Text>
 				)}

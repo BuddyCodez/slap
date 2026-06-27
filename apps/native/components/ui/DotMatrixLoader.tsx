@@ -66,7 +66,8 @@ export function DotMatrixLoader({
 	const gap = dotSize;
 
 	const dots = useMemo(() => {
-		const result: { key: string; row: number; col: number; opacity: number }[] = [];
+		const result: { key: string; row: number; col: number; opacity: number }[] =
+			[];
 		for (let r = 0; r < GRID; r++) {
 			for (let c = 0; c < GRID; c++) {
 				result.push({

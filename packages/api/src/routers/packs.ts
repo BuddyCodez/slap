@@ -5,10 +5,15 @@ import { PackStatus } from "@slap/db/prisma/generated/enums";
 import { z } from "zod";
 
 import { protectedProcedure, publicProcedure } from "../index";
+import { processImageToWebp } from "../lib/image-processing";
 import { imageProcessQueue } from "../lib/queues";
 import { redis } from "../lib/redis";
-import { processImageToWebp } from "../lib/image-processing";
-import { deleteObject, finalStickerKey, toPublicUrl, uploadObject } from "../lib/storage";
+import {
+	deleteObject,
+	finalStickerKey,
+	toPublicUrl,
+	uploadObject,
+} from "../lib/storage";
 import { validateStickerUpload } from "../lib/uploads";
 
 const packInclude = {
@@ -334,13 +339,17 @@ export const packsRouter = {
 				}),
 			);
 
-			await imageProcessQueue.add("finalize-pack", {
-				packId: pack.id,
-				stickers: processed,
-			}, {
-				attempts: 3,
-				backoff: { type: "exponential", delay: 2000 },
-			});
+			await imageProcessQueue.add(
+				"finalize-pack",
+				{
+					packId: pack.id,
+					stickers: processed,
+				},
+				{
+					attempts: 3,
+					backoff: { type: "exponential", delay: 2000 },
+				},
+			);
 
 			return {
 				id: pack.id,
@@ -554,21 +563,27 @@ export const stickersRouter = {
 				where: { id: pack.id },
 				data: { status: PackStatus.PROCESSING },
 			});
-			await imageProcessQueue.add("finalize-pack", {
-				packId: pack.id,
-				stickers: [{
-					stickerId: sticker.id,
-					r2Key: result.r2Key,
-					url: result.url,
-					width: result.width,
-					height: result.height,
-					sizeBytes: result.sizeBytes,
-					order,
-				}],
-			}, {
-				attempts: 3,
-				backoff: { type: "exponential", delay: 2000 },
-			});
+			await imageProcessQueue.add(
+				"finalize-pack",
+				{
+					packId: pack.id,
+					stickers: [
+						{
+							stickerId: sticker.id,
+							r2Key: result.r2Key,
+							url: result.url,
+							width: result.width,
+							height: result.height,
+							sizeBytes: result.sizeBytes,
+							order,
+						},
+					],
+				},
+				{
+					attempts: 3,
+					backoff: { type: "exponential", delay: 2000 },
+				},
+			);
 
 			return {
 				id: sticker.id,

@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
-import { useRouter } from "expo-router";
 import * as Haptics from "expo-haptics";
-import { Pressable, Text, View, Image, FlatList } from "react-native";
+import { useRouter } from "expo-router";
+import { FlatList, Image, Pressable, Text, View } from "react-native";
 import Animated, {
 	useAnimatedStyle,
 	useSharedValue,
@@ -10,9 +10,8 @@ import Animated, {
 import { StyleSheet, useUnistyles } from "react-native-unistyles";
 
 import { Screen } from "@/components/ui/screen";
-import { DotMatrixLoader } from "@/components/ui/DotMatrixLoader";
-import { orpc } from "@/utils/orpc";
 import { formatCount } from "@/utils/format";
+import { orpc } from "@/utils/orpc";
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
@@ -59,6 +58,7 @@ function SavedPackCard({ pack, onPress }: { pack: Pack; onPress: () => void }) {
 					source={{ uri: imageUrl }}
 					style={styles.thumbnail}
 					resizeMode="cover"
+					progressiveRenderingEnabled={true}
 				/>
 			)}
 			<View style={styles.cardContent}>
@@ -76,7 +76,7 @@ export default function SavedScreen() {
 	const router = useRouter();
 
 	const { data: savesData, isLoading } = useQuery(
-		orpc.saves.list.queryOptions({ input: { limit: 50 } })
+		orpc.saves.list.queryOptions({ input: { limit: 50 } }),
 	);
 
 	const packs = (savesData?.items || []) as Pack[];
@@ -89,7 +89,14 @@ export default function SavedScreen() {
 		return (
 			<Screen scrollable={false}>
 				<View style={styles.loaderContainer}>
-					<DotMatrixLoader size={48} color="#FFF500" />
+					<View
+						style={{
+							width: 48,
+							height: 48,
+							backgroundColor: "#e0e0e0",
+							borderRadius: 4,
+						}}
+					/>
 				</View>
 			</Screen>
 		);
@@ -123,10 +130,7 @@ export default function SavedScreen() {
 					</View>
 				}
 				renderItem={({ item }) => (
-					<SavedPackCard
-						pack={item}
-						onPress={() => handlePackPress(item.id)}
-					/>
+					<SavedPackCard pack={item} onPress={() => handlePackPress(item.id)} />
 				)}
 				contentContainerStyle={styles.listContent}
 				scrollIndicatorInsets={{ right: 1 }}

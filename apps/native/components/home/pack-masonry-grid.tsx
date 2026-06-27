@@ -1,6 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
-import { Pressable, Text, View, Image } from "react-native";
+import { Image, Pressable, Text, View } from "react-native";
 import Animated, {
 	useAnimatedStyle,
 	useSharedValue,
@@ -91,15 +91,10 @@ function PackRow({ pack, isLast = false, onPress }: PackRowProps) {
 					/>
 					<Text style={styles.rowStats}>{formatCount(pack.downloads)}</Text>
 					<Text style={styles.dotSeparator}>•</Text>
-					<Ionicons
-						name="heart-outline"
-						size={12}
-						color={theme.colors.muted}
-					/>
+					<Ionicons name="heart-outline" size={12} color={theme.colors.muted} />
 					<Text style={styles.rowStats}>{formatCount(pack.saves)}</Text>
 				</View>
 			</View>
-
 
 			{/* Apple-style thin divider line */}
 			{!isLast && <View style={styles.divider} />}
