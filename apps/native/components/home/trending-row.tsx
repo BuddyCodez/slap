@@ -18,7 +18,8 @@ type Pack = {
 	creator?: { name: string };
 	thumbnail?: string;
 	downloads: number;
-	saves: number;
+  saves: number;
+	previewSticker?: { url: string };
 };
 
 type TrendingRowProps = {
@@ -53,7 +54,7 @@ export function TrendingRow({ packs, onPackPress }: TrendingRowProps) {
 							<View style={styles.card}>
 								{pack.thumbnail ? (
 									<Image
-										source={{ uri: pack.thumbnail }}
+										source={{ uri: pack.previewSticker?.url || pack.thumbnail }}
 										style={styles.cardThumb}
 										resizeMode="cover"
 									/>

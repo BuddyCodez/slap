@@ -15,13 +15,21 @@ import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
 import { StyleSheet } from "react-native-unistyles";
 import { ButtonSkeleton } from "@/components/ui/button-skeleton";
 import { Screen } from "@/components/ui/screen";
+import { StickerActionSheet } from "@/components/ui/sticker-action-sheet";
 import { downloadPackToGallery } from "@/utils/download";
 import { formatCount } from "@/utils/format";
 import { orpc, queryClient } from "@/utils/orpc";
 import { addPackToWhatsApp } from "@/utils/whatsapp";
+import {
+	copyStickerToClipboard,
+	downloadSingleSticker,
+	shareStickerToWhatsApp,
+} from "@/utils/sticker-actions";
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 const AnimatedView = Animated.createAnimatedComponent(View);
+
+type Sticker = { id: string; url?: string };
 
 export default function PackDetailScreen() {
 	const router = useRouter();
@@ -29,6 +37,8 @@ export default function PackDetailScreen() {
 	const [isSaved, setIsSaved] = useState(false);
 	const [downloadFeedback, setDownloadFeedback] = useState(false);
 	const [whatsappFeedback, setWhatsappFeedback] = useState(false);
+	const [selectedSticker, setSelectedSticker] = useState<Sticker | null>(null);
+	const [actionSheetVisible, setActionSheetVisible] = useState(false);
 
 	const { data: pack, isLoading } = useQuery({
 		...orpc.packs.get.queryOptions({ input: { packId: id || "" } }),
@@ -88,6 +98,64 @@ export default function PackDetailScreen() {
 					? error.message
 					: "Failed to export pack to WhatsApp";
 			Alert.alert("WhatsApp Error", errorMessage, [{ text: "OK" }]);
+		},
+	});
+
+	const copyStickerMutation = useMutation({
+		mutationFn: () =>
+			copyStickerToClipboard(
+				selectedSticker?.url || "",
+				selectedSticker?.id || "",
+			),
+		onSuccess: () => {
+			Alert.alert("Success", "Sticker copied to clipboard!", [{ text: "OK" }]);
+			setActionSheetVisible(false);
+		},
+		onError: (error: unknown) => {
+			const errorMessage =
+				error instanceof Error
+					? error.message
+					: "Failed to copy sticker";
+			Alert.alert("Copy Error", errorMessage, [{ text: "OK" }]);
+		},
+	});
+
+	const whatsappStickerMutation = useMutation({
+		mutationFn: () =>
+			shareStickerToWhatsApp(
+				selectedSticker?.url || "",
+				selectedSticker?.id || "",
+				pack?.name,
+			),
+		onSuccess: () => {
+			setActionSheetVisible(false);
+		},
+		onError: (error: unknown) => {
+			const errorMessage =
+				error instanceof Error
+					? error.message
+					: "Failed to share sticker to WhatsApp";
+			Alert.alert("WhatsApp Error", errorMessage, [{ text: "OK" }]);
+		},
+	});
+
+	const downloadStickerMutation = useMutation({
+		mutationFn: () =>
+			downloadSingleSticker(
+				selectedSticker?.url || "",
+				selectedSticker?.id || "",
+				pack?.name,
+			),
+		onSuccess: () => {
+			Alert.alert("Success", "Sticker saved to gallery!", [{ text: "OK" }]);
+			setActionSheetVisible(false);
+		},
+		onError: (error: unknown) => {
+			const errorMessage =
+				error instanceof Error
+					? error.message
+					: "Failed to download sticker";
+			Alert.alert("Download Error", errorMessage, [{ text: "OK" }]);
 		},
 	});
 
@@ -158,6 +226,12 @@ export default function PackDetailScreen() {
 		router.back();
 	};
 
+	const handleStickerLongPress = (sticker: Sticker) => {
+		void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+		setSelectedSticker(sticker);
+		setActionSheetVisible(true);
+	};
+
 	if (!pack) {
 		return (
 			<Screen scrollable={false}>
@@ -196,7 +270,7 @@ export default function PackDetailScreen() {
 									<View style={styles.thumbWrap}>
 										{pack.thumbnail ? (
 											<Image
-												source={{ uri: pack.thumbnail }}
+												source={{ uri: pack.previewSticker?.url || pack.thumbnail }}
 												style={styles.thumbImg}
 												resizeMode="cover"
 												progressiveRenderingEnabled={true}
@@ -393,10 +467,16 @@ export default function PackDetailScreen() {
 									<View style={styles.sectionAccent} />
 									<Text style={styles.sectionTitle}>ALL STICKERS</Text>
 								</View>
+								<Text style={styles.hintText}>
+									HOLD STICKER TO COPY · WHATSAPP · SAVE
+								</Text>
 							</View>
 						}
 						renderItem={({ item }) => (
-							<View style={styles.stickerCell}>
+							<Pressable
+								style={styles.stickerCell}
+								onLongPress={() => handleStickerLongPress(item as any)}
+							>
 								<View style={styles.stickerCardShadow} />
 								<View style={styles.stickerCard}>
 									<Image
@@ -405,8 +485,20 @@ export default function PackDetailScreen() {
 										resizeMode="contain"
 									/>
 								</View>
-							</View>
+							</Pressable>
 						)}
+					/>
+					<StickerActionSheet
+						visible={actionSheetVisible}
+						onClose={() => setActionSheetVisible(false)}
+						onCopyToClipboard={() => copyStickerMutation.mutateAsync()}
+						onShareToWhatsApp={() => whatsappStickerMutation.mutateAsync()}
+						onDownload={() => downloadStickerMutation.mutateAsync()}
+						isLoading={
+							copyStickerMutation.isPending ||
+							whatsappStickerMutation.isPending ||
+							downloadStickerMutation.isPending
+						}
 					/>
 				</SafeAreaView>
 			</SafeAreaProvider>
@@ -675,6 +767,15 @@ const styles = StyleSheet.create((theme) => ({
 		fontSize: 14,
 		fontWeight: "900",
 		letterSpacing: 0.8,
+	},
+	hintText: {
+		color: "#888888",
+		fontSize: 11,
+		fontWeight: "600",
+		letterSpacing: 0.5,
+		paddingHorizontal: theme.spacing.lg,
+		marginTop: 8,
+		marginBottom: 12,
 	},
 	stickerCell: {
 		flex: 1 / 3,

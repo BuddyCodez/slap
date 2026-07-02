@@ -34,7 +34,6 @@ const XIcon = X as any;
 const ImageIconComponent = ImageIcon as any;
 const TagIcon = Tag as any;
 const ChevronRightIcon = ChevronRight as any;
-
 interface CreatePackFormProps {
 	onSuccess: () => void;
 	tags: string[];

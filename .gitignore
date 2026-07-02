@@ -52,3 +52,11 @@ coverage
 .cache
 tmp
 temp
+
+# dont push any agents skills and agents data to the repo
+.agents/*
+.claude/*
+.continue/*
+.cursor/*
+.vscode/* 
+# this was alr push on early commit so we need to keep it in the repo
